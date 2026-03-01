@@ -1,0 +1,5 @@
+{
+  "name": "nanjara devcontainer",
+  "image": "ghcr.io/shokkunrf/devcontainer-images/base:3",
+  "remoteUser": "developer"
+}
