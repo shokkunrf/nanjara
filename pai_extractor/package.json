@@ -1,0 +1,14 @@
+{
+  "name": "pai_extractor2",
+  "description": "",
+  "type": "module",
+  "main": "src/main.ts",
+  "scripts": {
+    "start": "node src/main.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@techstark/opencv-js": "^4.12.0-release.1",
+    "sharp": "^0.34.5"
+  }
+}

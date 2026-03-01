@@ -1,0 +1,229 @@
+import sharp from "sharp";
+import fs from "node:fs";
+import path from "node:path";
+
+// --- Tile extraction region ---
+interface TileDef {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+// --- Group definition ---
+interface GroupDef {
+  group: string;
+  file: string;
+  tiles: TileDef[];
+  names: string[];
+}
+
+// Helper: generate character tile row from scan-derived left positions
+function charTiles(lefts: number[], top: number): TileDef[] {
+  return lefts.map((left) => ({ left, top, width: 106, height: 143 }));
+}
+
+// --- Tile names per group (from _page2.png reference) ---
+// Order: logo, group-emblem, school-emblem, characters (left-to-right, top-to-bottom)
+const TILE_NAMES: Record<string, string[]> = {
+  muse: [
+    "logo", "muse", "otonokizaka",
+    "honoka", "eli", "kotori", "umi", "rin", "maki", "nozomi", "hanayo", "nico",
+  ],
+  aqours: [
+    "logo", "aqours", "uranohoshi",
+    "chika", "riko", "kanan", "dia", "you", "yoshiko", "hanamaru", "mari", "ruby",
+  ],
+  nijigasaki: [
+    "logo", "doukoukai", "nijigaku",
+    "yu", "ayumu", "kasumi", "shizuku", "karin", "ai", "kanata",
+    "setsuna", "emma", "rina", "shioriko", "mia", "lanzhu",
+  ],
+  liella: [
+    "logo", "liella", "yuigaoka",
+    "kanon", "kuku", "chisato", "sumire", "ren",
+    "kinako", "mei", "shiki", "natsumi", "wien", "tomari",
+  ],
+  hasunosora: [
+    "logo", "hasunosora", "kosho",
+    "kaho", "sayaka", "kozue", "tsuzuri", "rurino", "ginko", "kosuzu", "hime",
+  ],
+  musical: [
+    "logo", "musical", "tsubakisakihana",
+    "rurika", "yuzuha", "yukino", "hikaru", "maya", "anzu", "misuzu", "toa", "rena", "sayaka",
+  ],
+  bluebird: [
+    "logo", "ikizuraibu", "love_gakuin",
+    "poruka", "mai", "rei", "hanabi", "kiseki", "noriko", "yukuri", "kaguya", "maaya", "rinne",
+  ],
+};
+
+// --- All tile positions (hard-coded from image analysis) ---
+const GROUPS: GroupDef[] = [
+  // ========== Image 1: mN6RFdSHSgIFhDLh.jpeg ==========
+  {
+    group: "muse",
+    file: "input/mN6RFdSHSgIFhDLh.jpeg",
+    names: TILE_NAMES.muse,
+    tiles: [
+      // Logo
+      { left: 25, top: 371, width: 893, height: 143 },
+      // Emblems
+      { left: 923, top: 371, width: 106, height: 143 },
+      { left: 1038, top: 371, width: 106, height: 143 },
+      // 9 character tiles
+      ...charTiles([79, 193, 307, 422, 536, 650, 764, 878, 992], 525),
+    ],
+  },
+  {
+    group: "aqours",
+    file: "input/mN6RFdSHSgIFhDLh.jpeg",
+    names: TILE_NAMES.aqours,
+    tiles: [
+      // Logo
+      { left: 25, top: 725, width: 893, height: 143 },
+      // Emblems
+      { left: 923, top: 725, width: 106, height: 143 },
+      { left: 1038, top: 725, width: 106, height: 143 },
+      // 9 character tiles
+      ...charTiles([79, 194, 308, 423, 537, 652, 766, 881, 996], 879),
+    ],
+  },
+
+  // ========== Image 2: e0mM0yNYDItl3rTP.jpeg ==========
+  {
+    group: "nijigasaki",
+    file: "input/e0mM0yNYDItl3rTP.jpeg",
+    names: TILE_NAMES.nijigasaki,
+    tiles: [
+      // Logo
+      { left: 25, top: 112, width: 898, height: 143 },
+      // Emblems
+      { left: 928, top: 112, width: 106, height: 143 },
+      { left: 1041, top: 112, width: 106, height: 143 },
+      // Row 1: 7 character tiles
+      ...charTiles([205, 320, 434, 549, 663, 778, 892], 264),
+      // Row 2: 6 character tiles
+      ...charTiles([259, 374, 489, 604, 719, 833], 424),
+    ],
+  },
+  {
+    group: "liella",
+    file: "input/e0mM0yNYDItl3rTP.jpeg",
+    names: TILE_NAMES.liella,
+    tiles: [
+      // Logo
+      { left: 25, top: 627, width: 898, height: 143 },
+      // Emblems
+      { left: 926, top: 627, width: 106, height: 143 },
+      { left: 1041, top: 627, width: 106, height: 143 },
+      // Row 1: 6 character tiles
+      ...charTiles([262, 377, 490, 606, 721, 835], 783),
+      // Row 2: 5 character tiles
+      ...charTiles([309, 428, 547, 666, 785], 940),
+    ],
+  },
+
+  // ========== Image 3: dGRi5nEeGWK4PsvV.jpeg ==========
+  {
+    group: "hasunosora",
+    file: "input/dGRi5nEeGWK4PsvV.jpeg",
+    names: TILE_NAMES.hasunosora,
+    tiles: [
+      // Logo
+      { left: 25, top: 89, width: 893, height: 143 },
+      // Emblems
+      { left: 922, top: 89, width: 106, height: 143 },
+      { left: 1038, top: 89, width: 106, height: 143 },
+      // 8 character tiles
+      ...charTiles([141, 257, 372, 488, 603, 719, 835, 953], 243),
+    ],
+  },
+  {
+    group: "musical",
+    file: "input/dGRi5nEeGWK4PsvV.jpeg",
+    names: TILE_NAMES.musical,
+    tiles: [
+      // Logo
+      { left: 25, top: 440, width: 893, height: 143 },
+      // Emblems
+      { left: 921, top: 440, width: 106, height: 143 },
+      { left: 1038, top: 440, width: 106, height: 143 },
+      // 10 character tiles
+      ...charTiles([37, 149, 262, 373, 485, 597, 709, 822, 933, 1045], 599),
+    ],
+  },
+  {
+    group: "bluebird",
+    file: "input/dGRi5nEeGWK4PsvV.jpeg",
+    names: TILE_NAMES.bluebird,
+    tiles: [
+      // Logo
+      { left: 25, top: 796, width: 893, height: 143 },
+      // Emblems
+      { left: 923, top: 796, width: 106, height: 143 },
+      { left: 1038, top: 796, width: 106, height: 143 },
+      // 10 character tiles
+      ...charTiles([34, 147, 259, 372, 485, 597, 710, 822, 935, 1048], 952),
+    ],
+  },
+];
+
+// --- Main ---
+async function main() {
+  const outputDir = path.resolve("output");
+  fs.mkdirSync(outputDir, { recursive: true });
+
+  // Validate name counts
+  for (const group of GROUPS) {
+    if (group.tiles.length !== group.names.length) {
+      console.error(
+        `Name count mismatch for ${group.group}: ${group.tiles.length} tiles vs ${group.names.length} names`
+      );
+      return;
+    }
+  }
+
+  // Compute unified height (max across all tiles)
+  const maxHeight = Math.max(
+    ...GROUPS.flatMap((g) => g.tiles.map((t) => t.height))
+  );
+
+  let globalIndex = 1;
+  const totalTiles = GROUPS.reduce((sum, g) => sum + g.tiles.length, 0);
+
+  console.log(`Extracting ${totalTiles} tiles (unified height: ${maxHeight}px)\n`);
+
+  for (const group of GROUPS) {
+    console.log(`${group.group} (${group.tiles.length} tiles):`);
+
+    for (let i = 0; i < group.tiles.length; i++) {
+      const tile = group.tiles[i];
+      const name = group.names[i];
+      const idx = String(globalIndex).padStart(3, "0");
+      const outputName = `${idx}_${group.group}_${name}.png`;
+
+      await sharp(group.file)
+        .extract({
+          left: tile.left,
+          top: tile.top,
+          width: tile.width,
+          height: tile.height,
+        })
+        .resize({
+          height: maxHeight,
+          fit: "contain",
+          background: { r: 0, g: 0, b: 0, alpha: 0 },
+        })
+        .png()
+        .toFile(path.join(outputDir, outputName));
+
+      console.log(`  ${outputName}`);
+      globalIndex++;
+    }
+  }
+
+  console.log(`\nDone! Extracted ${totalTiles} tiles to ${outputDir}/`);
+}
+
+main().catch(console.error);
