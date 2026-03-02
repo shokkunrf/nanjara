@@ -10,12 +10,15 @@ interface TileDef {
   height: number;
 }
 
+// --- Tile label: romaji key (used in filename) + Japanese display name ---
+type TileLabel = [key: string, label: string];
+
 // --- Group definition ---
 interface GroupDef {
   group: string;
   file: string;
   tiles: TileDef[];
-  names: string[];
+  labels: TileLabel[];
 }
 
 // Helper: generate character tile row from scan-derived left positions
@@ -23,148 +26,107 @@ function charTiles(lefts: number[], top: number): TileDef[] {
   return lefts.map((left) => ({ left, top, width: 106, height: 143 }));
 }
 
-// --- Tile names per group (from _page2.png reference) ---
-// Order: logo, group-emblem, school-emblem, characters (left-to-right, top-to-bottom)
-const TILE_NAMES: Record<string, string[]> = {
+// --- Tile labels per group ---
+// Order: group-emblem, school-emblem, characters (left-to-right, top-to-bottom)
+const TILE_LABELS: Record<string, TileLabel[]> = {
   muse: [
-    "logo", "muse", "otonokizaka",
-    "honoka", "eli", "kotori", "umi", "rin", "maki", "nozomi", "hanayo", "nico",
+    ["muse", "μ's"],
+    ["otonokizaka", "音ノ木坂学院"],
+    ["honoka", "高坂穂乃果"],
+    ["eli", "絢瀬絵里"],
+    ["kotori", "南ことり"],
+    ["umi", "園田海未"],
+    ["rin", "星空凛"],
+    ["maki", "西木野真姫"],
+    ["nozomi", "東條希"],
+    ["hanayo", "小泉花陽"],
+    ["nico", "矢澤にこ"],
   ],
   aqours: [
-    "logo", "aqours", "uranohoshi",
-    "chika", "riko", "kanan", "dia", "you", "yoshiko", "hanamaru", "mari", "ruby",
+    ["aqours", "Aqours"],
+    ["uranohoshi", "浦の星女学院"],
+    ["chika", "高海千歌"],
+    ["riko", "桜内梨子"],
+    ["kanan", "松浦果南"],
+    ["dia", "黒澤ダイヤ"],
+    ["you", "渡辺曜"],
+    ["yoshiko", "津島善子"],
+    ["hanamaru", "国木田花丸"],
+    ["mari", "小原鞠莉"],
+    ["ruby", "黒澤ルビィ"],
   ],
   nijigasaki: [
-    "logo", "doukoukai", "nijigaku",
-    "yu", "ayumu", "kasumi", "shizuku", "karin", "ai", "kanata",
-    "setsuna", "emma", "rina", "shioriko", "mia", "lanzhu",
+    ["doukoukai", "スクールアイドル同好会"],
+    ["nijigaku", "虹ヶ咲学園"],
+    ["yu", "高咲侑"],
+    ["ayumu", "上原歩夢"],
+    ["kasumi", "中須かすみ"],
+    ["shizuku", "桜坂しずく"],
+    ["karin", "朝香果林"],
+    ["ai", "宮下愛"],
+    ["kanata", "近江彼方"],
+    ["setsuna", "優木せつ菜"],
+    ["emma", "エマ・ヴェルデ"],
+    ["rina", "天王寺璃奈"],
+    ["shioriko", "三船栞子"],
+    ["mia", "ミア・テイラー"],
+    ["lanzhu", "鐘嵐珠"],
   ],
   liella: [
-    "logo", "liella", "yuigaoka",
-    "kanon", "kuku", "chisato", "sumire", "ren",
-    "kinako", "mei", "shiki", "natsumi", "wien", "tomari",
+    ["liella", "Liella!"],
+    ["yuigaoka", "結ヶ丘女子高等学校"],
+    ["kanon", "澁谷かのん"],
+    ["kuku", "唐可可"],
+    ["chisato", "嵐千砂都"],
+    ["sumire", "平安名すみれ"],
+    ["ren", "葉月恋"],
+    ["kinako", "桜小路きな子"],
+    ["mei", "米女メイ"],
+    ["shiki", "若菜四季"],
+    ["natsumi", "鬼塚夏美"],
+    ["wien", "ウィーン・マルガレーテ"],
+    ["tomari", "鬼塚冬毬"],
   ],
   hasunosora: [
-    "logo", "hasunosora", "kosho",
-    "kaho", "sayaka", "kozue", "tsuzuri", "rurino", "ginko", "kosuzu", "hime",
+    ["hasunosora", "蓮ノ空女学院"],
+    ["kosho", "蓮ノ空女学院校章"],
+    ["kaho", "日野下花帆"],
+    ["sayaka", "村野さやか"],
+    ["kozue", "乙宗梢"],
+    ["tsuzuri", "夕霧綴理"],
+    ["rurino", "大沢瑠璃乃"],
+    ["ginko", "百生吟子"],
+    ["kosuzu", "徒町小鈴"],
+    ["hime", "安養寺姫芽"],
   ],
   musical: [
-    "logo", "musical", "tsubakisakihana",
-    "rurika", "yuzuha", "yukino", "hikaru", "maya", "anzu", "misuzu", "toa", "rena", "sayaka",
+    ["musical", "SCHOOL IDOL MUSICAL"],
+    ["tsubakisakihana", "椿咲花女子高校"],
+    ["rurika", "椿ルリカ"],
+    ["yuzuha", "堂ユズハ"],
+    ["yukino", "北条ユキノ"],
+    ["hikaru", "天草ヒカル"],
+    ["maya", "三笠マーヤ"],
+    ["anzu", "滝沢アンズ"],
+    ["misuzu", "若槻ミスズ"],
+    ["toa", "米楠トア"],
+    ["rena", "鈴員レナ"],
+    ["sayaka", "晴風サヤカ"],
   ],
   bluebird: [
-    "logo", "ikizuraibu", "love_gakuin",
-    "poruka", "mai", "rei", "hanabi", "kiseki", "noriko", "yukuri", "kaguya", "maaya", "rinne",
+    ["ikizuraibu", "いきづらい部!"],
+    ["love_gakuin", "Love学院高等学校"],
+    ["poruka", "高橋ポルカ"],
+    ["mai", "麻布麻衣"],
+    ["rei", "五椚玲"],
+    ["hanabi", "駒形花火"],
+    ["kiseki", "金澤奇跡"],
+    ["noriko", "調布のりこ"],
+    ["yukuri", "春宮ゆくり"],
+    ["kaguya", "此花輝夜"],
+    ["maaya", "山田真綾"],
+    ["rinne", "佐々木麟音"],
   ],
-};
-
-// --- Japanese display names (romaji key -> Japanese name) ---
-const TILE_DISPLAY_NAMES: Record<string, Record<string, string>> = {
-  muse: {
-    logo: "ラブライブ!",
-    muse: "μ's",
-    otonokizaka: "音ノ木坂学院",
-    honoka: "高坂穂乃果",
-    eli: "絢瀬絵里",
-    kotori: "南ことり",
-    umi: "園田海未",
-    rin: "星空凛",
-    maki: "西木野真姫",
-    nozomi: "東條希",
-    hanayo: "小泉花陽",
-    nico: "矢澤にこ",
-  },
-  aqours: {
-    logo: "ラブライブ!サンシャイン!!",
-    aqours: "Aqours",
-    uranohoshi: "浦の星女学院",
-    chika: "高海千歌",
-    riko: "桜内梨子",
-    kanan: "松浦果南",
-    dia: "黒澤ダイヤ",
-    you: "渡辺曜",
-    yoshiko: "津島善子",
-    hanamaru: "国木田花丸",
-    mari: "小原鞠莉",
-    ruby: "黒澤ルビィ",
-  },
-  nijigasaki: {
-    logo: "虹ヶ咲学園スクールアイドル同好会",
-    doukoukai: "スクールアイドル同好会",
-    nijigaku: "虹ヶ咲学園",
-    yu: "高咲侑",
-    ayumu: "上原歩夢",
-    kasumi: "中須かすみ",
-    shizuku: "桜坂しずく",
-    karin: "朝香果林",
-    ai: "宮下愛",
-    kanata: "近江彼方",
-    setsuna: "優木せつ菜",
-    emma: "エマ・ヴェルデ",
-    rina: "天王寺璃奈",
-    shioriko: "三船栞子",
-    mia: "ミア・テイラー",
-    lanzhu: "鐘嵐珠",
-  },
-  liella: {
-    logo: "ラブライブ!スーパースター!!",
-    liella: "Liella!",
-    yuigaoka: "結ヶ丘女子高等学校",
-    kanon: "澁谷かのん",
-    kuku: "唐可可",
-    chisato: "嵐千砂都",
-    sumire: "平安名すみれ",
-    ren: "葉月恋",
-    kinako: "桜小路きな子",
-    mei: "米女メイ",
-    shiki: "若菜四季",
-    natsumi: "鬼塚夏美",
-    wien: "ウィーン・マルガレーテ",
-    tomari: "鬼塚冬毬",
-  },
-  hasunosora: {
-    logo: "蓮ノ空女学院スクールアイドルクラブ",
-    hasunosora: "蓮ノ空女学院",
-    kosho: "蓮ノ空女学院校章",
-    kaho: "日野下花帆",
-    sayaka: "村野さやか",
-    kozue: "乙宗梢",
-    tsuzuri: "夕霧綴理",
-    rurino: "大沢瑠璃乃",
-    ginko: "百生吟子",
-    kosuzu: "徒町小鈴",
-    hime: "安養寺姫芽",
-  },
-  musical: {
-    logo: "スクールアイドルミュージカル",
-    musical: "SCHOOL IDOL MUSICAL",
-    tsubakisakihana: "椿咲花女子高校",
-    rurika: "椿ルリカ",
-    yuzuha: "堂ユズハ",
-    yukino: "北条ユキノ",
-    hikaru: "天草ヒカル",
-    maya: "三笠マーヤ",
-    anzu: "滝沢アンズ",
-    misuzu: "若槻ミスズ",
-    toa: "米楠トア",
-    rena: "鈴員レナ",
-    sayaka: "晴風サヤカ",
-  },
-  bluebird: {
-    logo: "イキヅライブ!LOVELIVE! BLUEBIRD",
-    ikizuraibu: "いきづらい部!",
-    love_gakuin: "Love学院高等学校",
-    poruka: "高橋ポルカ",
-    mai: "麻布麻衣",
-    rei: "五椚玲",
-    hanabi: "駒形花火",
-    kiseki: "金澤奇跡",
-    noriko: "調布のりこ",
-    yukuri: "春宮ゆくり",
-    kaguya: "此花輝夜",
-    maaya: "山田真綾",
-    rinne: "佐々木麟音",
-  },
 };
 
 // --- All tile positions (hard-coded from image analysis) ---
@@ -173,10 +135,8 @@ const GROUPS: GroupDef[] = [
   {
     group: "muse",
     file: "input/mN6RFdSHSgIFhDLh.jpeg",
-    names: TILE_NAMES.muse,
+    labels: TILE_LABELS.muse,
     tiles: [
-      // Logo
-      { left: 25, top: 371, width: 893, height: 143 },
       // Emblems
       { left: 923, top: 371, width: 106, height: 143 },
       { left: 1038, top: 371, width: 106, height: 143 },
@@ -187,10 +147,8 @@ const GROUPS: GroupDef[] = [
   {
     group: "aqours",
     file: "input/mN6RFdSHSgIFhDLh.jpeg",
-    names: TILE_NAMES.aqours,
+    labels: TILE_LABELS.aqours,
     tiles: [
-      // Logo
-      { left: 25, top: 725, width: 893, height: 143 },
       // Emblems
       { left: 923, top: 725, width: 106, height: 143 },
       { left: 1038, top: 725, width: 106, height: 143 },
@@ -203,10 +161,8 @@ const GROUPS: GroupDef[] = [
   {
     group: "nijigasaki",
     file: "input/e0mM0yNYDItl3rTP.jpeg",
-    names: TILE_NAMES.nijigasaki,
+    labels: TILE_LABELS.nijigasaki,
     tiles: [
-      // Logo
-      { left: 25, top: 112, width: 898, height: 143 },
       // Emblems
       { left: 928, top: 112, width: 106, height: 143 },
       { left: 1041, top: 112, width: 106, height: 143 },
@@ -219,10 +175,8 @@ const GROUPS: GroupDef[] = [
   {
     group: "liella",
     file: "input/e0mM0yNYDItl3rTP.jpeg",
-    names: TILE_NAMES.liella,
+    labels: TILE_LABELS.liella,
     tiles: [
-      // Logo
-      { left: 25, top: 627, width: 898, height: 143 },
       // Emblems
       { left: 926, top: 627, width: 106, height: 143 },
       { left: 1041, top: 627, width: 106, height: 143 },
@@ -237,10 +191,8 @@ const GROUPS: GroupDef[] = [
   {
     group: "hasunosora",
     file: "input/dGRi5nEeGWK4PsvV.jpeg",
-    names: TILE_NAMES.hasunosora,
+    labels: TILE_LABELS.hasunosora,
     tiles: [
-      // Logo
-      { left: 25, top: 89, width: 893, height: 143 },
       // Emblems
       { left: 922, top: 89, width: 106, height: 143 },
       { left: 1038, top: 89, width: 106, height: 143 },
@@ -251,10 +203,8 @@ const GROUPS: GroupDef[] = [
   {
     group: "musical",
     file: "input/dGRi5nEeGWK4PsvV.jpeg",
-    names: TILE_NAMES.musical,
+    labels: TILE_LABELS.musical,
     tiles: [
-      // Logo
-      { left: 25, top: 440, width: 893, height: 143 },
       // Emblems
       { left: 921, top: 440, width: 106, height: 143 },
       { left: 1038, top: 440, width: 106, height: 143 },
@@ -265,10 +215,8 @@ const GROUPS: GroupDef[] = [
   {
     group: "bluebird",
     file: "input/dGRi5nEeGWK4PsvV.jpeg",
-    names: TILE_NAMES.bluebird,
+    labels: TILE_LABELS.bluebird,
     tiles: [
-      // Logo
-      { left: 25, top: 796, width: 893, height: 143 },
       // Emblems
       { left: 923, top: 796, width: 106, height: 143 },
       { left: 1038, top: 796, width: 106, height: 143 },
@@ -283,11 +231,11 @@ async function main() {
   const outputDir = path.resolve("output");
   fs.mkdirSync(outputDir, { recursive: true });
 
-  // Validate name counts
+  // Validate label counts
   for (const group of GROUPS) {
-    if (group.tiles.length !== group.names.length) {
+    if (group.tiles.length !== group.labels.length) {
       console.error(
-        `Name count mismatch for ${group.group}: ${group.tiles.length} tiles vs ${group.names.length} names`
+        `Label count mismatch for ${group.group}: ${group.tiles.length} tiles vs ${group.labels.length} labels`,
       );
       return;
     }
@@ -295,22 +243,25 @@ async function main() {
 
   // Compute unified height (max across all tiles)
   const maxHeight = Math.max(
-    ...GROUPS.flatMap((g) => g.tiles.map((t) => t.height))
+    ...GROUPS.flatMap((g) => g.tiles.map((t) => t.height)),
   );
 
   let globalIndex = 1;
   const totalTiles = GROUPS.reduce((sum, g) => sum + g.tiles.length, 0);
+  const tilesJson: Record<string, string> = {};
 
-  console.log(`Extracting ${totalTiles} tiles (unified height: ${maxHeight}px)\n`);
+  console.log(
+    `Extracting ${totalTiles} tiles (unified height: ${maxHeight}px)\n`,
+  );
 
   for (const group of GROUPS) {
     console.log(`${group.group} (${group.tiles.length} tiles):`);
 
     for (let i = 0; i < group.tiles.length; i++) {
       const tile = group.tiles[i];
-      const name = group.names[i];
+      const [key, label] = group.labels[i];
       const idx = String(globalIndex).padStart(3, "0");
-      const outputName = `${idx}_${group.group}_${name}.png`;
+      const outputName = `${idx}_${group.group}_${key}.png`;
 
       await sharp(group.file)
         .extract({
@@ -327,28 +278,18 @@ async function main() {
         .png()
         .toFile(path.join(outputDir, outputName));
 
+      tilesJson[outputName] = label;
       console.log(`  ${outputName}`);
       globalIndex++;
     }
   }
 
-  // Generate tiles.json mapping (filename -> Japanese display name)
-  const tilesJson: Record<string, string> = {};
-  let jsonIndex = 1;
-  for (const group of GROUPS) {
-    const displayNames = TILE_DISPLAY_NAMES[group.group] ?? {};
-    for (const name of group.names) {
-      const idx = String(jsonIndex).padStart(3, "0");
-      const filename = `${idx}_${group.group}_${name}.png`;
-      tilesJson[filename] = displayNames[name] ?? name;
-      jsonIndex++;
-    }
-  }
+  // Write tiles.json mapping (filename -> Japanese display name)
   fs.writeFileSync(
     path.join(outputDir, "tiles.json"),
-    JSON.stringify(tilesJson, null, 2) + "\n"
+    JSON.stringify(tilesJson, null, 2) + "\n",
   );
-  console.log(`  -> tiles.json written`);
+  console.log(`\n  -> tiles.json written`);
 
   console.log(`\nDone! Extracted ${totalTiles} tiles to ${outputDir}/`);
 }
