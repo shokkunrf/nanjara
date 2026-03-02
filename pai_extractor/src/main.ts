@@ -58,6 +58,115 @@ const TILE_NAMES: Record<string, string[]> = {
   ],
 };
 
+// --- Japanese display names (romaji key -> Japanese name) ---
+const TILE_DISPLAY_NAMES: Record<string, Record<string, string>> = {
+  muse: {
+    logo: "ラブライブ!",
+    muse: "μ's",
+    otonokizaka: "音ノ木坂学院",
+    honoka: "高坂穂乃果",
+    eli: "絢瀬絵里",
+    kotori: "南ことり",
+    umi: "園田海未",
+    rin: "星空凛",
+    maki: "西木野真姫",
+    nozomi: "東條希",
+    hanayo: "小泉花陽",
+    nico: "矢澤にこ",
+  },
+  aqours: {
+    logo: "ラブライブ!サンシャイン!!",
+    aqours: "Aqours",
+    uranohoshi: "浦の星女学院",
+    chika: "高海千歌",
+    riko: "桜内梨子",
+    kanan: "松浦果南",
+    dia: "黒澤ダイヤ",
+    you: "渡辺曜",
+    yoshiko: "津島善子",
+    hanamaru: "国木田花丸",
+    mari: "小原鞠莉",
+    ruby: "黒澤ルビィ",
+  },
+  nijigasaki: {
+    logo: "虹ヶ咲学園スクールアイドル同好会",
+    doukoukai: "スクールアイドル同好会",
+    nijigaku: "虹ヶ咲学園",
+    yu: "高咲侑",
+    ayumu: "上原歩夢",
+    kasumi: "中須かすみ",
+    shizuku: "桜坂しずく",
+    karin: "朝香果林",
+    ai: "宮下愛",
+    kanata: "近江彼方",
+    setsuna: "優木せつ菜",
+    emma: "エマ・ヴェルデ",
+    rina: "天王寺璃奈",
+    shioriko: "三船栞子",
+    mia: "ミア・テイラー",
+    lanzhu: "鐘嵐珠",
+  },
+  liella: {
+    logo: "ラブライブ!スーパースター!!",
+    liella: "Liella!",
+    yuigaoka: "結ヶ丘女子高等学校",
+    kanon: "澁谷かのん",
+    kuku: "唐可可",
+    chisato: "嵐千砂都",
+    sumire: "平安名すみれ",
+    ren: "葉月恋",
+    kinako: "桜小路きな子",
+    mei: "米女メイ",
+    shiki: "若菜四季",
+    natsumi: "鬼塚夏美",
+    wien: "ウィーン・マルガレーテ",
+    tomari: "鬼塚冬毬",
+  },
+  hasunosora: {
+    logo: "蓮ノ空女学院スクールアイドルクラブ",
+    hasunosora: "蓮ノ空女学院",
+    kosho: "蓮ノ空女学院校章",
+    kaho: "日野下花帆",
+    sayaka: "村野さやか",
+    kozue: "乙宗梢",
+    tsuzuri: "夕霧綴理",
+    rurino: "大沢瑠璃乃",
+    ginko: "百生吟子",
+    kosuzu: "徒町小鈴",
+    hime: "安養寺姫芽",
+  },
+  musical: {
+    logo: "スクールアイドルミュージカル",
+    musical: "SCHOOL IDOL MUSICAL",
+    tsubakisakihana: "椿咲花女子高校",
+    rurika: "椿ルリカ",
+    yuzuha: "堂ユズハ",
+    yukino: "北条ユキノ",
+    hikaru: "天草ヒカル",
+    maya: "三笠マーヤ",
+    anzu: "滝沢アンズ",
+    misuzu: "若槻ミスズ",
+    toa: "米楠トア",
+    rena: "鈴員レナ",
+    sayaka: "晴風サヤカ",
+  },
+  bluebird: {
+    logo: "イキヅライブ!LOVELIVE! BLUEBIRD",
+    ikizuraibu: "いきづらい部!",
+    love_gakuin: "Love学院高等学校",
+    poruka: "高橋ポルカ",
+    mai: "麻布麻衣",
+    rei: "五椚玲",
+    hanabi: "駒形花火",
+    kiseki: "金澤奇跡",
+    noriko: "調布のりこ",
+    yukuri: "春宮ゆくり",
+    kaguya: "此花輝夜",
+    maaya: "山田真綾",
+    rinne: "佐々木麟音",
+  },
+};
+
 // --- All tile positions (hard-coded from image analysis) ---
 const GROUPS: GroupDef[] = [
   // ========== Image 1: mN6RFdSHSgIFhDLh.jpeg ==========
@@ -222,6 +331,24 @@ async function main() {
       globalIndex++;
     }
   }
+
+  // Generate tiles.json mapping (filename -> Japanese display name)
+  const tilesJson: Record<string, string> = {};
+  let jsonIndex = 1;
+  for (const group of GROUPS) {
+    const displayNames = TILE_DISPLAY_NAMES[group.group] ?? {};
+    for (const name of group.names) {
+      const idx = String(jsonIndex).padStart(3, "0");
+      const filename = `${idx}_${group.group}_${name}.png`;
+      tilesJson[filename] = displayNames[name] ?? name;
+      jsonIndex++;
+    }
+  }
+  fs.writeFileSync(
+    path.join(outputDir, "tiles.json"),
+    JSON.stringify(tilesJson, null, 2) + "\n"
+  );
+  console.log(`  -> tiles.json written`);
 
   console.log(`\nDone! Extracted ${totalTiles} tiles to ${outputDir}/`);
 }
