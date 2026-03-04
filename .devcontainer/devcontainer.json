@@ -1,5 +1,10 @@
 {
   "name": "nanjara devcontainer",
   "image": "ghcr.io/shokkunrf/devcontainer-images/base:3",
+  "mounts": [
+    "source=${localEnv:HOME}/.claude,target=/home/developer/.claude,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.claude.json,target=/home/developer/.claude.json,type=bind"
+  ],
+  "initializeCommand": "${localWorkspaceFolder}/.devcontainer/initializeCommand.sh",
   "remoteUser": "developer"
 }
