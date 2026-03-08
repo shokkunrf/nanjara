@@ -8,7 +8,7 @@
 </script>
 
 <CameraLayout>
-	{#snippet preview()}
+	{#snippet media()}
 		<img src={imageUrl} alt="撮影画像" />
 	{/snippet}
 

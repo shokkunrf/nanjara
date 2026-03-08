@@ -103,7 +103,7 @@
 </script>
 
 <CameraLayout>
-	{#snippet preview()}
+	{#snippet media()}
 		{#if errorMessage}
 			<div class="error">
 				<p>{errorMessage}</p>

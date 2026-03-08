@@ -1,13 +1,13 @@
 <script lang="ts">
-	import CameraPreview from './CameraPreview.svelte';
-	import CapturedImage from './CapturedImage.svelte';
+	import CameraCapture from './CameraCapture.svelte';
+	import CameraResult from './CameraResult.svelte';
 
-	let mode: 'preview' | 'captured' = $state('preview');
+	let mode: 'capture' | 'result' = $state('capture');
 	let capturedImageUrl: string = $state('');
 
 	function handleCapture(objectUrl: string) {
 		capturedImageUrl = objectUrl;
-		mode = 'captured';
+		mode = 'result';
 	}
 
 	function handleRetake() {
@@ -15,12 +15,12 @@
 			URL.revokeObjectURL(capturedImageUrl);
 		}
 		capturedImageUrl = '';
-		mode = 'preview';
+		mode = 'capture';
 	}
 </script>
 
-{#if mode === 'preview'}
-	<CameraPreview oncapture={handleCapture} />
+{#if mode === 'capture'}
+	<CameraCapture oncapture={handleCapture} />
 {:else}
-	<CapturedImage imageUrl={capturedImageUrl} onretake={handleRetake} />
+	<CameraResult imageUrl={capturedImageUrl} onretake={handleRetake} />
 {/if}

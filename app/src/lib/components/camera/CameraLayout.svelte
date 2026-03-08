@@ -1,12 +1,12 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 
-	let { preview, controls }: { preview: Snippet; controls: Snippet } = $props();
+	let { media, controls }: { media: Snippet; controls: Snippet } = $props();
 </script>
 
 <div class="container">
-	<div class="preview">
-		{@render preview()}
+	<div class="media">
+		{@render media()}
 	</div>
 
 	<div class="controls">
@@ -22,15 +22,15 @@
 		flex-direction: column;
 	}
 
-	.preview {
+	.media {
 		flex: 1;
 		min-height: 0;
 		position: relative;
 		background-color: #000;
 	}
 
-	.preview :global(video),
-	.preview :global(img) {
+	.media :global(video),
+	.media :global(img) {
 		position: absolute;
 		inset: 0;
 		width: 100%;
