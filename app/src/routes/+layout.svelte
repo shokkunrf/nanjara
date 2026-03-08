@@ -9,3 +9,18 @@
 </svelte:head>
 
 {@render children()}
+
+<style>
+	:global(html, body) {
+		margin: 0;
+		padding: 0;
+		width: 100%;
+		height: 100svh;
+		overflow: hidden;
+		background-color: #000;
+		color: #fff;
+		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+		-webkit-font-smoothing: antialiased;
+	}
+
+</style>
