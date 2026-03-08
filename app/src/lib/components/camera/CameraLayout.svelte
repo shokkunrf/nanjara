@@ -23,15 +23,24 @@
 	}
 
 	.preview {
-		width: 100%;
-		aspect-ratio: 9 / 16;
+		flex: 1;
 		min-height: 0;
 		position: relative;
 		background-color: #000;
 	}
 
+	.preview :global(video),
+	.preview :global(img) {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
+	}
+
 	.controls {
-		flex: 1;
+		height: calc(120px + env(safe-area-inset-bottom));
+		flex-shrink: 0;
 		display: flex;
 		align-items: center;
 		justify-content: center;

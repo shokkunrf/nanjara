@@ -18,14 +18,6 @@
 </CameraLayout>
 
 <style>
-	img {
-		position: absolute;
-		inset: 0;
-		width: 100%;
-		height: 100%;
-		object-fit: contain;
-	}
-
 	.retake {
 		padding: 12px 32px;
 		border-radius: 28px;

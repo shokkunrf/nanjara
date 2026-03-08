@@ -76,28 +76,8 @@
 		if (!videoElement || !canvasElement || !stream || capturing) return;
 		capturing = true;
 
-		const vw = videoElement.videoWidth;
-		const vh = videoElement.videoHeight;
-
-		// object-fit: cover で 9:16 にクロップされた領域と同じ範囲を切り出す
-		const targetRatio = 9 / 16;
-		const videoRatio = vw / vh;
-
-		let sx: number, sy: number, sw: number, sh: number;
-		if (videoRatio > targetRatio) {
-			sh = vh;
-			sw = vh * targetRatio;
-			sx = (vw - sw) / 2;
-			sy = 0;
-		} else {
-			sw = vw;
-			sh = vw / targetRatio;
-			sx = 0;
-			sy = (vh - sh) / 2;
-		}
-
-		canvasElement.width = sw;
-		canvasElement.height = sh;
+		canvasElement.width = videoElement.videoWidth;
+		canvasElement.height = videoElement.videoHeight;
 
 		const ctx = canvasElement.getContext('2d');
 		if (!ctx) {
@@ -105,7 +85,7 @@
 			return;
 		}
 
-		ctx.drawImage(videoElement, sx, sy, sw, sh, 0, 0, sw, sh);
+		ctx.drawImage(videoElement, 0, 0);
 		canvasElement.toBlob(
 			(blob) => {
 				if (!blob) {
@@ -144,14 +124,6 @@
 </CameraLayout>
 
 <style>
-	video {
-		position: absolute;
-		inset: 0;
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-	}
-
 	.error {
 		position: absolute;
 		inset: 0;
