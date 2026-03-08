@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import CameraLayout from './CameraLayout.svelte';
 
-	let { oncapture }: { oncapture: (dataUrl: string) => void } = $props();
+	let { oncapture }: { oncapture: (objectUrl: string) => void } = $props();
 
 	let videoElement: HTMLVideoElement | undefined = $state();
 	let canvasElement: HTMLCanvasElement | undefined = $state();

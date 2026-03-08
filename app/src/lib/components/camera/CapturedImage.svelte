@@ -2,14 +2,14 @@
 	import CameraLayout from './CameraLayout.svelte';
 
 	let {
-		imageDataUrl,
+		imageUrl,
 		onretake
-	}: { imageDataUrl: string; onretake: () => void } = $props();
+	}: { imageUrl: string; onretake: () => void } = $props();
 </script>
 
 <CameraLayout>
 	{#snippet preview()}
-		<img src={imageDataUrl} alt="撮影画像" />
+		<img src={imageUrl} alt="撮影画像" />
 	{/snippet}
 
 	{#snippet controls()}
