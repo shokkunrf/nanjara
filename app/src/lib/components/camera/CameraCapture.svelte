@@ -33,7 +33,7 @@
 			}
 			const mediaStream = await navigator.mediaDevices.getUserMedia({
 				video: {
-					facingMode: 'environment',
+					facingMode: { exact: 'environment' },
 					width: { ideal: 4096 },
 					height: { ideal: 4096 }
 				},
