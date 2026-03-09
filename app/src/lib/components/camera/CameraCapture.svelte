@@ -48,13 +48,15 @@
 			if (err instanceof DOMException) {
 				switch (err.name) {
 					case 'NotAllowedError':
-						errorMessage = 'カメラの使用が許可されていません。ブラウザの設定からカメラへのアクセスを許可してください。';
+						errorMessage =
+							'カメラの使用が許可されていません。ブラウザの設定からカメラへのアクセスを許可してください。';
 						break;
 					case 'NotFoundError':
 						errorMessage = 'カメラが見つかりません。カメラが接続されているか確認してください。';
 						break;
 					case 'NotReadableError':
-						errorMessage = 'カメラにアクセスできません。他のアプリがカメラを使用している可能性があります。';
+						errorMessage =
+							'カメラにアクセスできません。他のアプリがカメラを使用している可能性があります。';
 						break;
 					default:
 						errorMessage = `カメラの起動に失敗しました: ${err.message}`;

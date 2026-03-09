@@ -1,10 +1,7 @@
 <script lang="ts">
 	import CameraLayout from './CameraLayout.svelte';
 
-	let {
-		imageUrl,
-		onretake
-	}: { imageUrl: string; onretake: () => void } = $props();
+	let { imageUrl, onretake }: { imageUrl: string; onretake: () => void } = $props();
 </script>
 
 <CameraLayout>
