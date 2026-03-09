@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+	import type { HistoryBackEventDetail } from '$lib/types';
 	import CameraCapture from './CameraCapture.svelte';
 	import CameraResult from './CameraResult.svelte';
 
@@ -8,6 +10,7 @@
 	function handleCapture(objectUrl: string) {
 		capturedImageUrl = objectUrl;
 		mode = 'result';
+		history.pushState({ label: 'camera-result' }, '');
 	}
 
 	function handleRetake() {
@@ -17,6 +20,19 @@
 		capturedImageUrl = '';
 		mode = 'capture';
 	}
+
+	onMount(() => {
+		// Layoutからのhistory:backイベントを受け取る
+		const handleBack = ((e: CustomEvent<HistoryBackEventDetail>) => {
+			if (mode === 'result') {
+				handleRetake();
+				// 処理済みを通知（Layoutの離脱確認を抑止）
+				e.detail.prevented = true;
+			}
+		}) as EventListener;
+		window.addEventListener('history:back', handleBack);
+		return () => window.removeEventListener('history:back', handleBack);
+	});
 </script>
 
 {#if mode === 'capture'}
