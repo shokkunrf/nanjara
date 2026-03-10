@@ -15,7 +15,7 @@
 		startCamera();
 		return () => {
 			mounted = false;
-			stopCamera();
+			stream?.getTracks().forEach((track) => track.stop());
 		};
 	});
 
@@ -67,13 +67,6 @@
 		}
 	}
 
-	function stopCamera() {
-		if (stream) {
-			stream.getTracks().forEach((track) => track.stop());
-			stream = undefined;
-		}
-	}
-
 	function capture() {
 		if (!videoElement || !canvasElement || !stream || capturing) return;
 		capturing = true;
@@ -94,7 +87,6 @@
 					capturing = false;
 					return;
 				}
-				stopCamera();
 				oncapture(blob);
 			},
 			'image/jpeg',
