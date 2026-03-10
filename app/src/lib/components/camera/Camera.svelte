@@ -7,8 +7,8 @@
 	let mode: 'capture' | 'result' = $state('capture');
 	let capturedImageUrl: string = $state('');
 
-	function handleCapture(objectUrl: string) {
-		capturedImageUrl = objectUrl;
+	function handleCapture(blob: Blob) {
+		capturedImageUrl = URL.createObjectURL(blob);
 		mode = 'result';
 		history.pushState({ label: 'camera-result' }, '');
 	}
@@ -31,7 +31,12 @@
 			}
 		}) as EventListener;
 		window.addEventListener('history:back', handleBack);
-		return () => window.removeEventListener('history:back', handleBack);
+		return () => {
+			window.removeEventListener('history:back', handleBack);
+			if (capturedImageUrl) {
+				URL.revokeObjectURL(capturedImageUrl);
+			}
+		};
 	});
 </script>
 

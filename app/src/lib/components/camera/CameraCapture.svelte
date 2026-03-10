@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import CameraLayout from './CameraLayout.svelte';
 
-	let { oncapture }: { oncapture: (objectUrl: string) => void } = $props();
+	let { oncapture }: { oncapture: (blob: Blob) => void } = $props();
 
 	let videoElement: HTMLVideoElement | undefined = $state();
 	let canvasElement: HTMLCanvasElement | undefined = $state();
@@ -94,9 +94,8 @@
 					capturing = false;
 					return;
 				}
-				const objectUrl = URL.createObjectURL(blob);
 				stopCamera();
-				oncapture(objectUrl);
+				oncapture(blob);
 			},
 			'image/jpeg',
 			0.92
