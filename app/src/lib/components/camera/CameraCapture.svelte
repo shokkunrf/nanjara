@@ -2,6 +2,10 @@
 	import { onMount } from 'svelte';
 	import CameraLayout from './CameraLayout.svelte';
 
+	const IDEAL_WIDTH = 1920;
+	const IDEAL_HEIGHT = 1080;
+	const JPEG_QUALITY = 0.92;
+
 	let { oncapture }: { oncapture: (blob: Blob) => void } = $props();
 
 	let videoElement: HTMLVideoElement | undefined = $state();
@@ -24,8 +28,8 @@
 			const mediaStream = await navigator.mediaDevices.getUserMedia({
 				video: {
 					facingMode: { exact: 'environment' },
-					width: { ideal: 4096 },
-					height: { ideal: 4096 }
+					width: { ideal: IDEAL_WIDTH },
+					height: { ideal: IDEAL_HEIGHT }
 				},
 				audio: false
 			});
@@ -84,7 +88,7 @@
 				oncapture(blob);
 			},
 			'image/jpeg',
-			0.92
+			JPEG_QUALITY
 		);
 	}
 </script>
