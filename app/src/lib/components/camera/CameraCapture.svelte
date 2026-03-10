@@ -5,7 +5,7 @@
 	let { oncapture }: { oncapture: (blob: Blob) => void } = $props();
 
 	let videoElement: HTMLVideoElement | undefined = $state();
-	let canvasElement: HTMLCanvasElement | undefined = $state();
+	let canvasElement: HTMLCanvasElement | undefined;
 	let stream: MediaStream | undefined = $state();
 	let errorMessage: string | undefined = $state();
 	let capturing = $state(false);
@@ -17,12 +17,6 @@
 			mounted = false;
 			stream?.getTracks().forEach((track) => track.stop());
 		};
-	});
-
-	$effect(() => {
-		if (videoElement && stream) {
-			videoElement.srcObject = stream;
-		}
 	});
 
 	async function startCamera() {
@@ -40,6 +34,7 @@
 				return;
 			}
 			stream = mediaStream;
+			videoElement!.srcObject = mediaStream;
 		} catch (err) {
 			if (err instanceof TypeError) {
 				// HTTP環境などでnavigator.mediaDevicesが未定義の場合
