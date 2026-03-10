@@ -27,10 +27,6 @@
 
 	async function startCamera() {
 		try {
-			if (!navigator.mediaDevices?.getUserMedia) {
-				errorMessage = 'このブラウザはカメラに対応していません。HTTPSでアクセスしてください。';
-				return;
-			}
 			const mediaStream = await navigator.mediaDevices.getUserMedia({
 				video: {
 					facingMode: { exact: 'environment' },
@@ -45,7 +41,10 @@
 			}
 			stream = mediaStream;
 		} catch (err) {
-			if (err instanceof DOMException) {
+			if (err instanceof TypeError) {
+				// HTTP環境などでnavigator.mediaDevicesが未定義の場合
+				errorMessage = 'このブラウザはカメラに対応していません。HTTPSでアクセスしてください。';
+			} else if (err instanceof DOMException) {
 				switch (err.name) {
 					case 'NotAllowedError':
 						errorMessage =
