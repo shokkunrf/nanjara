@@ -1,42 +1,24 @@
-# sv
+# nanjara
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+## 開発
 
-## Creating a project
-
-If you're seeing this, you've probably already done this step. Congrats!
+依存パッケージをインストールし、開発サーバーを起動
 
 ```sh
-# create a new project
-npx sv create my-app
+npm install
+npm run dev -- --host
 ```
 
-To recreate this project with the same configuration:
+## ビルド
 
-```sh
-# recreate this project
-npx sv@0.12.4 create --template minimal --types ts --add prettier sveltekit-adapter="adapter:static" vitest="usages:unit,component" eslint --install npm nanjara
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
+本番用のビルドを作成
 
 ```sh
 npm run build
 ```
 
-You can preview the production build with `npm run preview`.
+ビルド結果をプレビュー
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+```sh
+npm run preview
+```
