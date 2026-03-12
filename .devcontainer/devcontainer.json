@@ -1,6 +1,23 @@
 {
   "name": "nanjara devcontainer",
   "image": "ghcr.io/shokkunrf/devcontainer-images/base:3",
+  "runArgs": ["--network", "host"],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "svelte.svelte-vscode",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint"
+      ]
+    },
+    "settings": {
+      "editor.formatOnSave": true,
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "[svelte]": {
+        "editor.defaultFormatter": "svelte.svelte-vscode"
+      }
+    }
+  },
   "mounts": [
     "source=${localEnv:HOME}/.claude,target=/home/developer/.claude,type=bind,consistency=cached",
     "source=${localEnv:HOME}/.claude.json,target=/home/developer/.claude.json,type=bind"
