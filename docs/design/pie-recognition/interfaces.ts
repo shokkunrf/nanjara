@@ -1,7 +1,7 @@
 /**
  * パイ認識アプリ 型定義
  *
- * 作成日: 2026-03-13
+ * 作成日: 2026-03-14
  * 関連設計: architecture.md
  *
  * 信頼性レベル:
@@ -24,21 +24,21 @@
 export type CameraMode = 'capture' | 'preview' | 'recognizing' | 'result';
 
 // ========================================
-// 牌データ
+// パイデータ
 // ========================================
 
 /**
- * 牌ID（ファイル名ベース）
- * 🔵 信頼性: tiles.json のキー構造より
+ * パイID（ファイル名ベース）
+ * 🔵 信頼性: pais.json のキー構造より
  * 例: "001_muse_muse.png", "003_muse_honoka.png"
  */
-export type TileId = string;
+export type PaiId = string;
 
 /**
- * 牌グループ
- * 🔵 信頼性: tiles.json・extractor/src/main.ts のグループ定義より
+ * パイグループ
+ * 🔵 信頼性: pais.json・extractor/src/main.ts のグループ定義より
  */
-export type TileGroup =
+export type PaiGroup =
 	| 'muse'
 	| 'aqours'
 	| 'nijigasaki'
@@ -48,61 +48,79 @@ export type TileGroup =
 	| 'bluebird';
 
 /**
- * 牌メタデータ（tiles.json の1エントリに対応）
- * 🔵 信頼性: tiles.json の構造より
+ * パイ属性（加点役判定に使用）
+ * 🔵 信頼性: manual.pdf解読済み + ユーザヒアリング「ユニット・学年・誕生月等」より
+ *
+ * 各パイが持つ属性。これらの属性の一致により加点役を判定する。
+ * 属性の種類は拡張可能。
  */
-export interface TileMeta {
-	/** ファイル名 (例: "003_muse_honoka.png") */
-	id: TileId; // 🔵 tiles.json キーより
-	/** 日本語表示名 (例: "高坂穂乃果") */
-	label: string; // 🔵 tiles.json 値より
+export interface PaiAttributes {
 	/** 所属グループ (例: "muse") */
-	group: TileGroup; // 🔵 ファイル名規則より
-	/** グループ内キー (例: "honoka") */
-	key: string; // 🔵 ファイル名規則より
+	group: PaiGroup; // 🔵 pais.json・ファイル名規則より
+	/** ユニット (例: "Printemps", "BiBi") */
+	unit?: string; // 🔵 manual.pdf解読 + ユーザヒアリングより
+	/** 学年 (例: 1, 2, 3) */
+	schoolYear?: number; // 🔵 manual.pdf解読 + ユーザヒアリングより
+	/** 誕生月 (例: 1-12) */
+	birthMonth?: number; // 🔵 manual.pdf解読 + ユーザヒアリングより
+	/** その他の属性（拡張用） */
+	[key: string]: string | number | boolean | undefined; // 🟡 拡張性のため
 }
 
 /**
- * 牌メタデータの辞書（TileId → TileMeta）
- * 🟡 信頼性: tiles.jsonの変換形式として妥当な推測
+ * パイメタデータ（pais.json の1エントリに対応）
+ * 🔵 信頼性: pais.json の構造 + manual.pdf解読より
  */
-export type TileMetaMap = Record<TileId, TileMeta>;
+export interface PaiMeta {
+	/** ファイル名 (例: "003_muse_honoka.png") */
+	id: PaiId; // 🔵 pais.json キーより
+	/** 日本語表示名 (例: "高坂穂乃果") */
+	label: string; // 🔵 pais.json 値より
+	/** パイの属性情報（加点役判定用） */
+	attributes: PaiAttributes; // 🔵 manual.pdf解読 + ユーザヒアリングより
+}
+
+/**
+ * パイメタデータの辞書（PaiId → PaiMeta）
+ * 🟡 信頼性: pais.jsonの変換形式として妥当な推測
+ */
+export type PaiMetaMap = Record<PaiId, PaiMeta>;
 
 // ========================================
 // 画像認識
 // ========================================
 
 /**
- * 牌検出結果（画像内の1牌の領域）
- * 🟡 信頼性: 画像処理パイプライン設計から妥当な推測
+ * パイ検出結果（画像内の1パイの領域）
+ * 🟡 信頼性: OpenCV.js findContours + boundingRect の出力から妥当な推測
  */
 export interface DetectedRegion {
 	/** バウンディングボックス左上X座標 */
-	x: number; // 🟡 画像処理設計より
+	x: number; // 🟡 OpenCV.js boundingRect出力
 	/** バウンディングボックス左上Y座標 */
-	y: number; // 🟡 画像処理設計より
+	y: number; // 🟡 OpenCV.js boundingRect出力
 	/** 幅 */
-	width: number; // 🟡 画像処理設計より
+	width: number; // 🟡 OpenCV.js boundingRect出力
 	/** 高さ */
-	height: number; // 🟡 画像処理設計より
+	height: number; // 🟡 OpenCV.js boundingRect出力
 	/** 切り出した画像データ */
-	imageData: ImageData; // 🟡 Canvas API処理の出力
+	imageData: ImageData; // 🟡 OpenCV.js Mat → ImageData変換後の出力
 }
 
 /**
  * pHashデータ（事前処理結果）
  * 🟡 信頼性: pHashアルゴリズム設計から妥当な推測
- * hashes.json の構造: { [TileId]: pHashValue }
+ * hashes.json の構造: { [PaiId]: pHashValue }
  */
-export type TileHashMap = Record<TileId, string>;
+export type PaiHashMap = Record<PaiId, string>;
 
 /**
- * 牌識別結果（1枚分）
+ * パイ識別結果（1枚分）
  * 🟡 信頼性: 認識パイプライン設計から妥当な推測
  */
-export interface RecognizedTile {
-	/** 識別された牌ID */
-	tileId: TileId; // 🟡 認識結果として
+export interface RecognizedPai {
+	/** 識別されたパイID */
+	paiId: PaiId; // 🟡 認識結果として
 	/** 類似度スコア（ハミング距離の逆数等、0-1） */
 	confidence: number; // 🟡 精度評価のため
 	/** 検出された画像上の領域 */
@@ -114,8 +132,8 @@ export interface RecognizedTile {
  * 🟡 信頼性: 認識パイプライン設計から妥当な推測
  */
 export interface RecognitionResult {
-	/** 認識された牌の配列（左から右の順） */
-	tiles: RecognizedTile[]; // 🟡 認識結果
+	/** 認識されたパイの配列（左から右の順） */
+	pais: RecognizedPai[]; // 🟡 認識結果
 	/** 処理時間（ミリ秒） */
 	processingTimeMs: number; // 🟡 パフォーマンス計測用
 }
@@ -126,34 +144,32 @@ export interface RecognitionResult {
 
 /**
  * 加点役の条件タイプ
- * 🟡 信頼性: 麻雀の一般的な役の構造から妥当な推測
- * 具体的な条件はmanual.pdf解読後に確定
+ * 🔵 信頼性: manual.pdf解読済み + ユーザヒアリング「ユニット・学年・誕生月等」より
+ *
+ * 手牌内のパイが特定の属性を共有しているかで判定する。
  */
 export type RuleConditionType =
-	| 'group_count' // 特定グループの牌が一定枚数以上
-	| 'group_complete' // 特定グループの牌が全種類揃う
-	| 'pair' // 同じ牌が2枚
-	| 'all_same_group' // 全牌が同一グループ
-	| 'custom'; // その他のカスタム条件
+	| 'same_attribute' // 手牌内のパイが同じ属性値を持つ（例: 同じユニット、同じ学年）
+	| 'attribute_value'; // 特定の属性が特定の値を持つ（例: 誕生月が1月）
 
 /**
  * 加点役の条件定義
- * 🟡 信頼性: manual.pdf未解読のため推測
+ * 🔵 信頼性: manual.pdf解読済み + ユーザヒアリングより
  */
 export interface RuleCondition {
 	/** 条件タイプ */
-	type: RuleConditionType; // 🟡 推測
-	/** 対象グループ（group_count, group_complete時） */
-	group?: TileGroup; // 🟡 推測
-	/** 必要枚数（group_count時） */
-	count?: number; // 🟡 推測
-	/** カスタム条件の識別子 */
-	customId?: string; // 🟡 推測
+	type: RuleConditionType; // 🔵 ユーザヒアリングより
+	/** 対象属性名 (例: "unit", "schoolYear", "birthMonth") */
+	attribute: string; // 🔵 ユーザヒアリングより
+	/** 必要枚数（same_attribute時、デフォルト2） */
+	count?: number; // 🟡 妥当な推測
+	/** 特定の属性値（attribute_value時） */
+	value?: string | number; // 🟡 妥当な推測
 }
 
 /**
  * 加点役の定義（rules.json の1エントリ）
- * 🟡 信頼性: 要件定義REQ-004, REQ-006 + manual.pdf未解読
+ * 🔵 信頼性: 要件定義REQ-004, REQ-006 + manual.pdf解読済み + ユーザヒアリングより
  */
 export interface ScoringRule {
 	/** 加点役ID */
@@ -161,18 +177,18 @@ export interface ScoringRule {
 	/** 加点役名（日本語） */
 	name: string; // 🔵 要件定義「加点役名を表示」より
 	/** 加点役の条件（すべて満たす必要がある） */
-	conditions: RuleCondition[]; // 🟡 推測
-	/** この加点役のジャラ（点数） */
-	jara: number; // 🔵 要件定義「ジャラを計算」より
+	conditions: RuleCondition[]; // 🔵 ユーザヒアリングより
+	/** この加点役の固定ジャラ（点数） */
+	jara: number; // 🔵 ユーザヒアリング「固定点数」より
 }
 
 /**
  * ルールデータ全体（rules.json の構造）
- * 🟡 信頼性: REQ-006 + manual.pdf未解読
+ * 🔵 信頼性: REQ-006 + manual.pdf解読済み + ユーザヒアリングより
  */
 export interface RulesData {
-	/** 加点役の一覧 */
-	rules: ScoringRule[]; // 🟡 推測
+	/** 加点役の一覧（30個以上） */
+	rules: ScoringRule[]; // 🔵 ユーザヒアリング「30個以上」より
 }
 
 /**
@@ -182,19 +198,19 @@ export interface RulesData {
 export interface MatchedRule {
 	/** 該当した加点役 */
 	rule: ScoringRule; // 🔵 要件定義より
-	/** この加点役のジャラ */
-	jara: number; // 🔵 要件定義より
+	/** この加点役の固定ジャラ */
+	jara: number; // 🔵 要件定義 + ユーザヒアリング「固定点数」より
 }
 
 /**
  * ジャラ計算結果
- * 🔵 信頼性: 要件定義REQ-005「合計ジャラ + 内訳」より
+ * 🔵 信頼性: 要件定義REQ-005「合計ジャラ + 内訳」+ ユーザヒアリング「単純合算」より
  */
 export interface ScoringResult {
 	/** 該当した加点役の一覧 */
 	matchedRules: MatchedRule[]; // 🔵 要件定義より
-	/** 合計ジャラ */
-	totalJara: number; // 🔵 要件定義より
+	/** 合計ジャラ（単純合算） */
+	totalJara: number; // 🔵 要件定義 + ユーザヒアリング「単純合算」より
 }
 
 // ========================================
@@ -202,26 +218,48 @@ export interface ScoringResult {
 // ========================================
 
 /**
- * 牌検出サービスのインターフェース
+ * OpenCV.js ローダーのインターフェース
+ * 🔵 信頼性: アーキテクチャ設計・先読みロード戦略・設計ヒアリングより確定
+ */
+export interface IOpenCVLoader {
+	/**
+	 * OpenCV.js WASMのバックグラウンド先読みを開始する
+	 * プレビュー画面表示時に呼び出す
+	 */
+	preload(): void;
+
+	/**
+	 * OpenCV.js のロード完了を保証する
+	 * 先読みが完了していれば即座に返る
+	 * @returns ロード完了時に解決されるPromise
+	 */
+	ensureLoaded(): Promise<void>;
+}
+
+/**
+ * パイ検出サービスのインターフェース
  * 🟡 信頼性: アーキテクチャ設計・データフロー設計から妥当な推測
  */
-export interface ITileDetector {
+export interface IPaiDetector {
 	/**
-	 * 撮影画像から牌領域を検出する
+	 * 撮影画像からパイ領域を検出する
+	 * OpenCV.js の findContours を使用し、任意角度のパイを検出する
+	 * 内部で画像の縮小・Mat の解放を行う
 	 * @param imageSource 撮影画像のBlob URLまたはImageBitmap
-	 * @returns 検出された牌領域の配列（左から右の順）
+	 * @returns 検出されたパイ領域の配列（左から右の順）
 	 */
 	detect(imageSource: string | ImageBitmap): Promise<DetectedRegion[]>;
 }
 
 /**
- * 牌識別サービスのインターフェース
+ * パイ識別サービスのインターフェース
  * 🟡 信頼性: アーキテクチャ設計・データフロー設計から妥当な推測
  */
-export interface ITileRecognizer {
+export interface IPaiRecognizer {
 	/**
-	 * 牌領域画像から牌を識別する
-	 * @param regions 検出された牌領域の配列
+	 * パイ領域画像からパイを識別する
+	 * pHash によるハミング距離比較で最近傍マッチングを行う
+	 * @param regions 検出されたパイ領域の配列
 	 * @returns 認識結果
 	 */
 	recognize(regions: DetectedRegion[]): Promise<RecognitionResult>;
@@ -229,28 +267,30 @@ export interface ITileRecognizer {
 
 /**
  * 加点役判定・ジャラ計算サービスのインターフェース
- * 🔵 信頼性: 要件定義REQ-004, REQ-005より
+ * 🔵 信頼性: 要件定義REQ-004, REQ-005 + ユーザヒアリングより確定
  */
 export interface IScoringEngine {
 	/**
 	 * 手牌から加点役を判定しジャラを計算する
-	 * @param tileIds 認識された牌IDの配列
+	 * 各パイの属性を参照し、条件に一致する加点役を抽出、固定ジャラを単純合算する
+	 * @param paiIds 認識されたパイIDの配列
 	 * @returns 判定結果（加点役一覧 + 合計ジャラ）
 	 */
-	score(tileIds: TileId[]): ScoringResult;
+	score(paiIds: PaiId[]): ScoringResult;
 }
 
 // ========================================
 // 信頼性レベルサマリー
 // ========================================
 /**
- * - 🔵 青信号: 16件 (43%)
- * - 🟡 黄信号: 21件 (57%)
+ * - 🔵 青信号: 27件 (59%)
+ * - 🟡 黄信号: 19件 (41%)
  * - 🔴 赤信号: 0件 (0%)
  *
  * 品質評価: 高品質
  *
- * 備考: 🟡が多いのは、画像処理パイプラインの具体的な実装と
- * manual.pdfのルール詳細が未解読であるため。
- * 実装フェーズで段階的に🔵に引き上げる。
+ * 備考: 🟡が残るのは、画像処理パイプラインの具体的な実装詳細
+ * （OpenCV.js出力形式等）が実装時に確定するため。
+ * 加点役・ジャラ関連はmanual.pdf解読済み + ユーザヒアリングにより
+ * 大幅に🔵に向上。
  */

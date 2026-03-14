@@ -1,6 +1,6 @@
 # パイ認識アプリ アーキテクチャ設計
 
-**作成日**: 2026-03-13
+**作成日**: 2026-03-14
 **関連要件定義**: [requirements.md](../../spec/pie-recognition/requirements.md)
 **ヒアリング記録**: [design-interview.md](design-interview.md)
 
@@ -24,37 +24,73 @@
 - **パターン**: コンポーネントベースSPA（SvelteKit静的生成）
 - **選択理由**: 既存のSvelteKit + adapter-static構成を維持。バックエンドなし・外部通信なしの制約に最適。
 
-## 画像認識アーキテクチャ 🟡
+## 画像認識アーキテクチャ 🔵
 
-**信頼性**: 🟡 *要件（ブラウザ内・3秒以内・84種類マッチング）から妥当な推測*
+**信頼性**: 🔵 *要件定義・ユーザヒアリング・設計ヒアリングより確定*
 
-### 方式: 色ヒストグラム + pHash（知覚ハッシュ）ハイブリッド方式
+### 方式: OpenCV.js（検出） + pHash（識別）
 
 84種類の固定牌を識別する問題であり、機械学習モデルは不要。以下の2段階で認識する。
 
-#### 1. 牌検出（Detection）
-- 撮影画像をCanvas APIで読み込み
-- 横一列に並んだ牌を前提とし、輪郭検出で個別の牌領域を切り出す
-- **手法**: 2値化 → 輪郭検出 → バウンディングボックス抽出
-- Canvas API のみで実装可能（外部ライブラリ不要）
+#### 1. パイ検出（Detection）— OpenCV.js
 
-#### 2. 牌識別（Recognition）
-- 切り出した各牌画像と、事前処理済みの84種類の参照データを比較
+- 撮影画像から個別のパイ領域を切り出す
+- **手法**: OpenCV.js の `cv.findContours()` による輪郭検出
+- グレースケール変換 → 画像縮小（認識用） → 2値化（大津の方法） → 輪郭検出 → バウンディングボックス抽出 → アスペクト比フィルタ
+- **任意の角度に対応**: 横一列・縦一列・斜め配置すべてを検出可能
+- OpenCV.js（WASM ~8MB）はプレビュー画面表示時にバックグラウンドで先読みロード開始し、「認識する」ボタンタップ時に利用可能とする
+- **メモリ管理**: OpenCV.js の Mat オブジェクトは処理完了後に必ず `mat.delete()` で解放する。try-finally パターンで確実にクリーンアップを行う
+
+#### 2. パイ識別（Recognition）— pHash
+
+- 切り出した各パイ画像と、事前処理済みの84種類の参照データを比較
 - **手法**: pHash（知覚ハッシュ）によるハミング距離比較
-- 事前処理で84枚の牌画像をpHashに変換し、JSONとして`app/static/`に配置
-- ランタイムでは撮影画像の各牌のpHashを計算し、最も近い参照データとマッチング
+- 事前処理で84枚のパイ画像をpHashに変換し、JSONとして`app/static/`に配置
+- ランタイムでは撮影画像の各パイのpHashを計算し、最も近い参照データとマッチング
 
-#### 選択理由
-- Canvas API のみで動作（WASM不要、初期ロード高速）
-- 84種類の固定画像マッチングにはpHashが十分な精度
-- 事前処理でハッシュ計算をオフライン実行し、ランタイム負荷を最小化
-- 3秒以内の性能要件を満たせる見込み
+#### 画像の前処理 🟡
+
+**信頼性**: 🟡 *パフォーマンス要件から妥当な推測*
+
+- 撮影画像（1920x1080）を検出処理前に縮小する（例: 長辺960px）
+- 縮小により OpenCV.js の処理負荷を低減し、3秒以内の目標達成を支援
+- 縮小後もパイの検出精度に影響がないサイズを選定（実装時に調整）
+
+#### 検出にOpenCV.jsを選択した理由
+
+- **傾き対応**: 片手撮影では±15°以上の傾きが発生しうる。Canvas API水平走査（±5°）では不十分
+- **実装コスト**: `cv.findContours()` + `cv.boundingRect()` で~30行。Canvas API自前実装（連結成分ラベリング）は~300-400行
+- **信頼性**: OpenCV.jsは広く使われた実績ある画像処理ライブラリ
+- **初期ロードへの影響**: WASM ~8MBはプレビュー画面でバックグラウンド先読みし、撮影画面の表示速度には影響なし。2回目以降はブラウザキャッシュで即座にロード
+
+#### 識別にpHashを選択した理由
+
+- **問題の性質に合致**: 84種類の固定画像のどれに最も似ているかを判定する1対Nの分類問題
+- **軽量・高速**: ハミング距離（ビット演算）のみで84回比較。テンプレートマッチ（84回全面走査）と比べ圧倒的に高速
+- **事前処理との相性**: 84枚分のハッシュ値を事前計算しJSONに格納（< 10KB）
 
 #### フォールバック計画
+
 pHashでの精度が不十分な場合、以下の段階的改善が可能:
 1. 色ヒストグラム比較を併用してスコアリング精度向上
-2. OpenCV.js（WASM）によるテンプレートマッチング導入
+2. OpenCV.jsのテンプレートマッチング（部分的に活用）
 3. 最終手段としてTensorFlow.js による軽量分類モデル
+
+## 加点役・ジャラ判定アーキテクチャ 🔵
+
+**信頼性**: 🔵 *manual.pdf解読済み・ユーザヒアリングより確定*
+
+### 方式: パイ属性ベースのルールマッチング
+
+各パイにユニット・学年・誕生月などの属性を持たせ、手牌内で属性が一致する組み合わせにより加点役を判定する。
+
+#### 設計方針
+
+- **パイ属性データ**: 各パイに属性リスト（ユニット、学年、誕生月など）を持たせる
+- **拡張性**: JSONで管理し、後から新しい加点役を容易に追加可能
+- **加点役数**: 30個以上の加点役をサポート
+- **ジャラ計算**: 各加点役は固定点数を持ち、該当する加点役のジャラを単純合算
+- **判定ロジック**: 手牌のパイIDから属性を参照し、各加点役の条件（同一属性のパイが一定枚数等）を評価
 
 ## コンポーネント構成 🔵
 
@@ -66,13 +102,13 @@ pHashでの精度が不十分な場合、以下の段階的改善が可能:
 - **状態管理**: Svelte 5 runes (`$state`, `$props`) 🔵 *既存パターン*
 - **ルーティング**: SvelteKitファイルベースルーティング 🔵 *既存構成*
 - **スタイリング**: Scoped CSS（コンポーネントごと） 🔵 *既存パターン*
-- **画像処理**: Canvas API + 自前のpHash実装 🟡 *技術選定から妥当な推測*
+- **画像処理**: OpenCV.js（検出） + pHash自前実装（識別） 🔵 *設計ヒアリングより確定*
 
 ### データ層
 
-- **牌データ**: `app/static/tiles/` に画像 + メタデータJSON 🔵 *ユーザヒアリング*
+- **パイデータ**: `app/static/pais/` に画像 + メタデータJSON 🔵 *ユーザヒアリング*
 - **ルールデータ**: `app/static/rules/` に加点役・ジャラJSON 🔵 *ユーザヒアリング*
-- **事前処理データ**: `app/static/tiles/hashes.json` にpHashデータ 🟡 *設計から妥当な推測*
+- **事前処理データ**: `app/static/pais/hashes.json` にpHashデータ 🟡 *設計から妥当な推測*
 
 ## システム構成図 🔵
 
@@ -83,28 +119,31 @@ graph TB
     subgraph Browser[スマホブラウザ]
         Camera[カメラ撮影<br>CameraCapture]
         Preview[撮影確認<br>CameraResult]
-        Recognizer[画像認識エンジン<br>TileRecognizer]
+        Recognizer[画像認識エンジン<br>PaiDetector + PaiRecognizer]
         Result[認識結果表示<br>RecognitionResult]
         Scorer[加点役判定・ジャラ計算<br>ScoringEngine]
     end
 
     subgraph Static[静的アセット app/static/]
-        TileImages[牌画像<br>tiles/*.png]
-        TileMeta[牌メタデータ<br>tiles/tiles.json]
-        HashData[pHashデータ<br>tiles/hashes.json]
+        PaiImages[パイ画像<br>pais/*.png]
+        PaiMeta[パイメタデータ<br>pais/pais.json]
+        HashData[pHashデータ<br>pais/hashes.json]
         RuleData[ルールデータ<br>rules/rules.json]
     end
 
     Camera -->|Blob| Preview
     Preview -->|"認識する"| Recognizer
-    Recognizer -->|Canvas API| Recognizer
+    Preview -.->|バックグラウンド先読み| OpenCVWasm[OpenCV.js WASM]
+    OpenCVWasm -->|利用| Recognizer
+    Recognizer -->|OpenCV.js + pHash| Recognizer
     HashData -->|参照| Recognizer
-    TileMeta -->|参照| Recognizer
+    PaiMeta -->|参照| Recognizer
     Recognizer -->|認識結果| Result
     Result -->|手牌データ| Scorer
     RuleData -->|参照| Scorer
+    PaiMeta -->|パイ属性参照| Scorer
     Scorer -->|加点役・ジャラ| Result
-    TileImages -->|サムネイル| Result
+    PaiImages -->|サムネイル| Result
 ```
 
 ## 画面遷移 🔵
@@ -118,7 +157,7 @@ stateDiagram-v2
     Preview --> Capture: 再撮影
     Preview --> Recognizing: 「認識する」ボタン
     Recognizing --> Result: 認識完了
-    Recognizing --> Preview: 認識失敗（牌未検出）
+    Recognizing --> Preview: 認識失敗（パイ未検出）
     Result --> Capture: 再撮影
 ```
 
@@ -145,9 +184,10 @@ app/
 │   │   │   │   └── CameraLayout.svelte
 │   │   │   └── recognition/         # 新規: 認識結果表示 🟡
 │   │   │       └── RecognitionResult.svelte
-│   │   ├── services/                 # 新規: ビジネスロジック 🟡
-│   │   │   ├── tile-detector.ts      # 牌検出（画像→牌領域切り出し）
-│   │   │   ├── tile-recognizer.ts    # 牌識別（切り出し画像→牌ID）
+│   │   ├── services/                 # 新規: ビジネスロジック 🔵
+│   │   │   ├── opencv-loader.ts      # OpenCV.js 遅延ロード・先読み
+│   │   │   ├── pai-detector.ts       # パイ検出（OpenCV.js findContours）
+│   │   │   ├── pai-recognizer.ts     # パイ識別（pHashマッチング）
 │   │   │   ├── phash.ts             # pHash計算
 │   │   │   └── scoring-engine.ts     # 加点役判定・ジャラ計算
 │   │   ├── types.ts                  # 型定義（拡張）
@@ -157,16 +197,16 @@ app/
 │       ├── +layout.svelte
 │       └── +layout.ts
 ├── static/
-│   ├── tiles/                        # 新規: 牌データ 🔵
-│   │   ├── *.png                     # 84枚の牌画像
-│   │   ├── tiles.json                # 牌メタデータ
+│   ├── pais/                         # 新規: パイデータ 🔵
+│   │   ├── *.png                     # 84枚のパイ画像
+│   │   ├── pais.json                 # パイメタデータ（属性情報含む）
 │   │   └── hashes.json               # pHashデータ（事前処理で生成）
 │   └── rules/                        # 新規: ルールデータ 🔵
 │       └── rules.json                # 加点役・ジャラ定義
 └── ...
 
 tools/
-├── extractor/                        # 既存: 牌画像抽出
+├── extractor/                        # 既存: パイ画像抽出
 └── hasher/                           # 新規: pHash事前処理 🟡
     ├── src/main.ts
     └── package.json
@@ -178,11 +218,13 @@ tools/
 
 **信頼性**: 🔵 *ユーザヒアリング「3秒以内」+ 技術検討*
 
-- **事前処理**: 84枚の牌画像をpHash化し、JSONとして配置（ランタイム負荷ゼロ）
-- **検出高速化**: 横一列の前提で水平走査のみ実施（全面探索不要）
+- **事前処理**: 84枚のパイ画像をpHash化し、JSONとして配置（ランタイム負荷ゼロ）
+- **画像縮小**: 撮影画像を検出前に縮小し、OpenCV.js の処理負荷を低減 🟡
+- **検出高速化**: OpenCV.js findContoursは最適化済みWASMで高速動作
 - **識別高速化**: pHashのハミング距離比較は整数演算のみで高速
-- **並列処理**: 複数牌のpHash計算をPromise.allで並列化
-- **データサイズ**: hashes.json は84件のハッシュ値のみ（< 10KB）
+- **先読みロード**: OpenCV.js WASMはプレビュー画面表示時にバックグラウンドで先読みロード開始（初回利用時の待ち時間を削減）
+- **データサイズ**: hashes.json は84件のハッシュ値のみ（< 10KB）、OpenCV.js WASM ~8MB（ブラウザキャッシュ可）
+- **初回アクセス時の考慮**: WASM未キャッシュの初回は8MBのダウンロードが発生する。プレビュー画面での先読みにより、ユーザーが画像を確認している間にダウンロードを完了させる 🟡
 
 ### セキュリティ 🔵
 
@@ -198,7 +240,7 @@ tools/
 
 - **片手操作**: すべてのボタンを画面下部に配置（親指で届く範囲）
 - **高速表示**: 結果画面は認識完了と同時に即座に表示
-- **わかりやすさ**: 各牌のサムネイル + 日本語名 + 加点役 + ジャラを一画面に表示
+- **わかりやすさ**: 各パイのサムネイル + 日本語名 + 加点役 + ジャラを一画面に表示
 
 ## 技術的制約 🔵
 
@@ -206,7 +248,8 @@ tools/
 
 ### パフォーマンス制約
 - 撮影から結果表示まで3秒以内
-- スマホのメインスレッドでの画像処理（Web Worker未使用の場合はUI応答性に注意）
+- スマホのメインスレッドでの画像処理（UI応答性に注意）
+- OpenCV.js WASM 初回ダウンロード ~8MB（先読みで緩和）
 
 ### プラットフォーム制約
 - iOS Safari / Android Chrome のみ対応
@@ -214,9 +257,14 @@ tools/
 - 外部サーバー通信不可
 
 ### データ制約
-- 牌は84種類固定
+- パイは84種類固定
 - 手牌は8-9枚
-- 横一列配置を前提
+- パイの配置は任意角度に対応（横・縦・斜め）
+- 加点役は30個以上（JSONで拡張可能）
+
+### リソース管理制約 🟡
+- OpenCV.js の Mat オブジェクトは明示的に `delete()` で解放が必要（GC対象外）
+- 処理完了後のメモリリークを防ぐため、try-finally パターンを徹底する
 
 ## 関連文書
 
@@ -227,8 +275,8 @@ tools/
 
 ## 信頼性レベルサマリー
 
-- 🔵 青信号: 18件 (72%)
-- 🟡 黄信号: 7件 (28%)
+- 🔵 青信号: 24件 (80%)
+- 🟡 黄信号: 6件 (20%)
 - 🔴 赤信号: 0件 (0%)
 
 **品質評価**: 高品質
