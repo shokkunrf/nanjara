@@ -1,0 +1,22 @@
+{
+  "name": "pai-hasher",
+  "description": "パイ画像のpHash事前処理ツール",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "src/main.ts",
+  "scripts": {
+    "start": "node src/main.ts",
+    "test": "node --test src/phash.test.ts",
+    "lint": "eslint src/",
+    "format": "prettier --write src/"
+  },
+  "dependencies": {
+    "sharp": "^0.34.5"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "eslint": "^10.0.3",
+    "prettier": "^3.8.1",
+    "typescript-eslint": "^8.57.0"
+  }
+}
