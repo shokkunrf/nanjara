@@ -1,3 +1,3 @@
 export interface HistoryBackEventDetail {
-	prevented: boolean;
+  prevented: boolean;
 }
