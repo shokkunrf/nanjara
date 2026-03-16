@@ -2,289 +2,140 @@ import sharp from 'sharp';
 import fs from 'node:fs';
 import path from 'node:path';
 
-// --- Tile extraction region ---
-interface TileDef {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
+const [source, outputDir] = process.argv.slice(2);
+if (!source || !outputDir) {
+  console.error('Usage: tsx src/main.ts <source.png> <output-dir>');
+  process.exit(1);
 }
 
-// --- Tile label: romaji key (used in filename) + Japanese display name ---
-type TileLabel = [key: string, label: string];
+const PAI_WIDTH = 174;
+const PAI_HEIGHT = 236;
 
-// --- Group definition ---
-interface GroupDef {
-  group: string;
-  file: string;
-  tiles: TileDef[];
-  labels: TileLabel[];
-}
-
-// Helper: generate character tile row from scan-derived left positions
-function charTiles(lefts: number[], top: number): TileDef[] {
-  return lefts.map((left) => ({ left, top, width: 106, height: 143 }));
-}
-
-// --- Tile labels per group ---
-// Order: group-emblem, school-emblem, characters (left-to-right, top-to-bottom)
-const TILE_LABELS: Record<string, TileLabel[]> = {
-  livelive: [
-    ['muse', "μ's"],
-    ['otonokizaka', '音ノ木坂学院'],
-    ['honoka', '高坂穂乃果'],
-    ['eli', '絢瀬絵里'],
-    ['kotori', '南ことり'],
-    ['umi', '園田海未'],
-    ['rin', '星空凛'],
-    ['maki', '西木野真姫'],
-    ['nozomi', '東條希'],
-    ['hanayo', '小泉花陽'],
-    ['nico', '矢澤にこ'],
-  ],
-  sunshine: [
-    ['aqours', 'Aqours'],
-    ['uranohoshi', '浦の星女学院'],
-    ['chika', '高海千歌'],
-    ['riko', '桜内梨子'],
-    ['kanan', '松浦果南'],
-    ['dia', '黒澤ダイヤ'],
-    ['you', '渡辺曜'],
-    ['yoshiko', '津島善子'],
-    ['hanamaru', '国木田花丸'],
-    ['mari', '小原鞠莉'],
-    ['ruby', '黒澤ルビィ'],
-  ],
-  nijigaku: [
-    ['doukoukai', '虹ヶ咲学園スクールアイドル同好会'],
-    ['nijigasaki', '虹ヶ咲学園'],
-    ['yu', '高咲侑'],
-    ['ayumu', '上原歩夢'],
-    ['kasumi', '中須かすみ'],
-    ['shizuku', '桜坂しずく'],
-    ['karin', '朝香果林'],
-    ['ai', '宮下愛'],
-    ['kanata', '近江彼方'],
-    ['setsuna', '優木せつ菜'],
-    ['emma', 'エマ・ヴェルデ'],
-    ['rina', '天王寺璃奈'],
-    ['shioriko', '三船栞子'],
-    ['mia', 'ミア・テイラー'],
-    ['lanzhu', '鐘嵐珠'],
-  ],
-  superstar: [
-    ['liella', 'Liella!'],
-    ['yuigaoka', '結ヶ丘女子高等学校'],
-    ['kanon', '澁谷かのん'],
-    ['kuku', '唐可可'],
-    ['chisato', '嵐千砂都'],
-    ['sumire', '平安名すみれ'],
-    ['ren', '葉月恋'],
-    ['kinako', '桜小路きな子'],
-    ['mei', '米女メイ'],
-    ['shiki', '若菜四季'],
-    ['natsumi', '鬼塚夏美'],
-    ['wien', 'ウィーン・マルガレーテ'],
-    ['tomari', '鬼塚冬毬'],
-  ],
-  hasujo: [
-    ['club', '蓮ノ空女学院スクールアイドルクラブ'],
-    ['hasunosora', '蓮ノ空女学院'],
-    ['kaho', '日野下花帆'],
-    ['sayaka', '村野さやか'],
-    ['rurino', '大沢瑠璃乃'],
-    ['ginko', '百生吟子'],
-    ['kosuzu', '徒町小鈴'],
-    ['hime', '安養寺姫芽'],
-    ['ceras', 'セラス柳田リリエンフェルト'],
-    ['izumi', '桂木泉'],
-  ],
-  musical: [
-    ['musical', 'SCHOOL IDOL MUSICAL'],
-    ['takizakura_tsubakisakihana', '滝桜女学院 椿咲花女子高校'],
-    ['rurika', '椿ルリカ'],
-    ['yuzuha', '皇ユズハ'],
-    ['yukino', '北条ユキノ'],
-    ['hikaru', '天草ヒカル'],
-    ['maya', '三笠マーヤ'],
-    ['anzu', '滝沢アンズ'],
-    ['misuzu', '若槻ミスズ'],
-    ['toa', '来栖トア'],
-    ['rena', '鈴賀レナ'],
-    ['sayaka', '晴風サヤカ'],
-  ],
-  ikizu: [
-    ['ikizuraibu', 'いきづらい部!'],
-    ['love_gakuin', 'Love学院高等学校'],
-    ['poruka', '高橋ポルカ'],
-    ['mai', '麻布麻衣'],
-    ['akira', '五桐玲'],
-    ['hanabi', '駒形花火'],
-    ['miracle', '金澤奇跡'],
-    ['noriko', '調布のりこ'],
-    ['yukuri', '春宮ゆくり'],
-    ['aurora', '此花輝夜'],
-    ['midori', '山田真緑'],
-    ['shion', '佐々木翔音'],
-  ],
+const SERIES: Record<string, Record<string, { left: number; top: number }>> = {
+  livelive: {
+    muse: { left: 433, top: 2374 },
+    otonokizaka: { left: 648, top: 2374 },
+    honoka: { left: 863, top: 2374 },
+    eli: { left: 1047, top: 2374 },
+    kotori: { left: 1230, top: 2374 },
+    umi: { left: 1414, top: 2374 },
+    rin: { left: 1597, top: 2374 },
+    maki: { left: 1780, top: 2374 },
+    nozomi: { left: 1964, top: 2374 },
+    hanayo: { left: 2147, top: 2374 },
+    nico: { left: 2330, top: 2374 },
+  },
+  sunshine: {
+    aqours: { left: 2837, top: 2374 },
+    uranohoshi: { left: 3052, top: 2374 },
+    chika: { left: 3267, top: 2374 },
+    riko: { left: 3450, top: 2374 },
+    kanan: { left: 3634, top: 2374 },
+    dia: { left: 3817, top: 2374 },
+    you: { left: 4000, top: 2374 },
+    yoshiko: { left: 4183, top: 2374 },
+    hanamaru: { left: 4367, top: 2374 },
+    mari: { left: 4550, top: 2374 },
+    ruby: { left: 4733, top: 2374 },
+  },
+  nijigaku: {
+    doukoukai: { left: 436, top: 2966 },
+    nijigasaki: { left: 651, top: 2966 },
+    yu: { left: 867, top: 2966 },
+    ayumu: { left: 1050, top: 2966 },
+    kasumi: { left: 1234, top: 2966 },
+    shizuku: { left: 1417, top: 2966 },
+    karin: { left: 1600, top: 2966 },
+    ai: { left: 1784, top: 2966 },
+    kanata: { left: 1967, top: 2966 },
+    setsuna: { left: 2150, top: 2966 },
+    emma: { left: 2334, top: 2966 },
+    rina: { left: 2517, top: 2966 },
+    shioriko: { left: 2700, top: 2966 },
+    mia: { left: 2884, top: 2966 },
+    lanzhu: { left: 3067, top: 2966 },
+  },
+  superstar: {
+    liella: { left: 435, top: 3561 },
+    yuigaoka: { left: 650, top: 3561 },
+    kanon: { left: 865, top: 3561 },
+    kuku: { left: 1049, top: 3561 },
+    chisato: { left: 1232, top: 3561 },
+    sumire: { left: 1416, top: 3561 },
+    ren: { left: 1599, top: 3561 },
+    kinako: { left: 1782, top: 3561 },
+    mei: { left: 1966, top: 3561 },
+    shiki: { left: 2149, top: 3561 },
+    natsumi: { left: 2332, top: 3561 },
+    wien: { left: 2515, top: 3561 },
+    tomari: { left: 2699, top: 3561 },
+  },
+  hasujo: {
+    club: { left: 3097, top: 3561 },
+    hasunosora: { left: 3312, top: 3561 },
+    kaho: { left: 3527, top: 3561 },
+    sayaka: { left: 3710, top: 3561 },
+    rurino: { left: 3893, top: 3561 },
+    ginko: { left: 4077, top: 3561 },
+    kosuzu: { left: 4260, top: 3561 },
+    hime: { left: 4443, top: 3561 },
+    ceras: { left: 4627, top: 3561 },
+    izumi: { left: 4810, top: 3561 },
+  },
+  musical: {
+    musical: { left: 391, top: 4154 },
+    takizakura_tsubakisakihana: { left: 606, top: 4154 },
+    rurika: { left: 821, top: 4154 },
+    yuzuha: { left: 1005, top: 4154 },
+    yukino: { left: 1188, top: 4154 },
+    hikaru: { left: 1371, top: 4154 },
+    maya: { left: 1554, top: 4154 },
+    anzu: { left: 1738, top: 4154 },
+    misuzu: { left: 1921, top: 4154 },
+    toa: { left: 2104, top: 4154 },
+    rena: { left: 2288, top: 4154 },
+    sayaka: { left: 2471, top: 4154 },
+  },
+  ikizu: {
+    ikizuraibu: { left: 2794, top: 4154 },
+    love_gakuin: { left: 3009, top: 4154 },
+    poruka: { left: 3224, top: 4154 },
+    mai: { left: 3408, top: 4154 },
+    akira: { left: 3591, top: 4154 },
+    hanabi: { left: 3774, top: 4154 },
+    miracle: { left: 3958, top: 4154 },
+    noriko: { left: 4141, top: 4154 },
+    yukuri: { left: 4324, top: 4154 },
+    aurora: { left: 4507, top: 4154 },
+    midori: { left: 4691, top: 4154 },
+    shion: { left: 4875, top: 4154 },
+  },
 };
 
-// --- All tile positions (hard-coded from image analysis) ---
-const GROUPS: GroupDef[] = [
-  // ========== Image 1: mN6RFdSHSgIFhDLh.jpeg ==========
-  {
-    group: 'muse',
-    file: 'input/mN6RFdSHSgIFhDLh.jpeg',
-    labels: TILE_LABELS.muse,
-    tiles: [
-      // Emblems
-      { left: 923, top: 371, width: 106, height: 143 },
-      { left: 1038, top: 371, width: 106, height: 143 },
-      // 9 character tiles
-      ...charTiles([79, 193, 307, 422, 536, 650, 764, 878, 992], 525),
-    ],
-  },
-  {
-    group: 'aqours',
-    file: 'input/mN6RFdSHSgIFhDLh.jpeg',
-    labels: TILE_LABELS.aqours,
-    tiles: [
-      // Emblems
-      { left: 923, top: 725, width: 106, height: 143 },
-      { left: 1038, top: 725, width: 106, height: 143 },
-      // 9 character tiles
-      ...charTiles([79, 194, 308, 423, 537, 652, 766, 881, 996], 879),
-    ],
-  },
-
-  // ========== Image 2: e0mM0yNYDItl3rTP.jpeg ==========
-  {
-    group: 'nijigasaki',
-    file: 'input/e0mM0yNYDItl3rTP.jpeg',
-    labels: TILE_LABELS.nijigasaki,
-    tiles: [
-      // Emblems
-      { left: 928, top: 112, width: 106, height: 143 },
-      { left: 1041, top: 112, width: 106, height: 143 },
-      // Row 1: 7 character tiles
-      ...charTiles([205, 320, 434, 549, 663, 778, 892], 264),
-      // Row 2: 6 character tiles
-      ...charTiles([259, 374, 489, 604, 719, 833], 424),
-    ],
-  },
-  {
-    group: 'liella',
-    file: 'input/e0mM0yNYDItl3rTP.jpeg',
-    labels: TILE_LABELS.liella,
-    tiles: [
-      // Emblems
-      { left: 926, top: 627, width: 106, height: 143 },
-      { left: 1041, top: 627, width: 106, height: 143 },
-      // Row 1: 6 character tiles
-      ...charTiles([262, 377, 490, 606, 721, 835], 783),
-      // Row 2: 5 character tiles
-      ...charTiles([309, 428, 547, 666, 785], 940),
-    ],
-  },
-
-  // ========== Image 3: dGRi5nEeGWK4PsvV.jpeg ==========
-  {
-    group: 'hasunosora',
-    file: 'input/dGRi5nEeGWK4PsvV.jpeg',
-    labels: TILE_LABELS.hasunosora,
-    tiles: [
-      // Emblems
-      { left: 922, top: 89, width: 106, height: 143 },
-      { left: 1038, top: 89, width: 106, height: 143 },
-      // 8 character tiles
-      ...charTiles([141, 257, 372, 488, 603, 719, 835, 953], 243),
-    ],
-  },
-  {
-    group: 'musical',
-    file: 'input/dGRi5nEeGWK4PsvV.jpeg',
-    labels: TILE_LABELS.musical,
-    tiles: [
-      // Emblems
-      { left: 921, top: 440, width: 106, height: 143 },
-      { left: 1038, top: 440, width: 106, height: 143 },
-      // 10 character tiles
-      ...charTiles([37, 149, 262, 373, 485, 597, 709, 822, 933, 1045], 599),
-    ],
-  },
-  {
-    group: 'bluebird',
-    file: 'input/dGRi5nEeGWK4PsvV.jpeg',
-    labels: TILE_LABELS.bluebird,
-    tiles: [
-      // Emblems
-      { left: 923, top: 796, width: 106, height: 143 },
-      { left: 1038, top: 796, width: 106, height: 143 },
-      // 10 character tiles
-      ...charTiles([34, 147, 259, 372, 485, 597, 710, 822, 935, 1048], 952),
-    ],
-  },
-];
-
-// --- Main ---
 async function main() {
-  const outputDir = path.resolve('output');
   fs.mkdirSync(outputDir, { recursive: true });
 
-  // Validate label counts
-  for (const group of GROUPS) {
-    if (group.tiles.length !== group.labels.length) {
-      console.error(
-        `Label count mismatch for ${group.group}: ${group.tiles.length} tiles vs ${group.labels.length} labels`,
-      );
-      return;
-    }
-  }
-
-  // Compute unified height (max across all tiles)
-  const maxHeight = Math.max(...GROUPS.flatMap((g) => g.tiles.map((t) => t.height)));
-
   let globalIndex = 1;
-  const totalTiles = GROUPS.reduce((sum, g) => sum + g.tiles.length, 0);
-  const tilesJson: Record<string, string> = {};
 
-  console.log(`Extracting ${totalTiles} tiles (unified height: ${maxHeight}px)\n`);
-
-  for (const group of GROUPS) {
-    console.log(`${group.group} (${group.tiles.length} tiles):`);
-
-    for (let i = 0; i < group.tiles.length; i++) {
-      const tile = group.tiles[i];
-      const [key, label] = group.labels[i];
+  for (const [series, pais] of Object.entries(SERIES)) {
+    for (const [name, pai] of Object.entries(pais)) {
       const idx = String(globalIndex).padStart(3, '0');
-      const outputName = `${idx}_${group.group}_${key}.png`;
+      const outputName = `${idx}_${series}_${name}.png`;
 
-      await sharp(group.file)
+      await sharp(source)
         .extract({
-          left: tile.left,
-          top: tile.top,
-          width: tile.width,
-          height: tile.height,
-        })
-        .resize({
-          height: maxHeight,
-          fit: 'contain',
-          background: { r: 0, g: 0, b: 0, alpha: 0 },
+          left: pai.left,
+          top: pai.top,
+          width: PAI_WIDTH,
+          height: PAI_HEIGHT,
         })
         .png()
         .toFile(path.join(outputDir, outputName));
 
-      tilesJson[outputName] = label;
-      console.log(`  ${outputName}`);
+      console.log(outputName);
       globalIndex++;
     }
   }
-
-  // Write tiles.json mapping (filename -> Japanese display name)
-  fs.writeFileSync(path.join(outputDir, 'tiles.json'), JSON.stringify(tilesJson, null, 2) + '\n');
-  console.log(`\n  -> tiles.json written`);
-
-  console.log(`\nDone! Extracted ${totalTiles} tiles to ${outputDir}/`);
 }
 
 main().catch(console.error);
