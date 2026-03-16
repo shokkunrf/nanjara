@@ -52,7 +52,7 @@
 ### タスク一覧
 
 - [x] [TASK-0001: pHash事前処理ツール作成](TASK-0001.md) - TDD 🔵
-- [ ] [TASK-0002: パイ画像・メタデータ配置](TASK-0002.md) - DIRECT 🔵
+- [x] [TASK-0002: パイ画像・メタデータ配置](TASK-0002.md) - DIRECT 🔵
 - [ ] [TASK-0003: 型定義の実装](TASK-0003.md) - DIRECT 🔵
 - [ ] [TASK-0004: ルールデータ作成](TASK-0004.md) - DIRECT 🔵
 

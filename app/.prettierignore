@@ -6,4 +6,6 @@ bun.lock
 bun.lockb
 
 # Miscellaneous
-/static/
+/static/*
+!/static/pai-details.json
+!/static/pai-hashes.json
