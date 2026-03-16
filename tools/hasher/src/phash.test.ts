@@ -6,26 +6,26 @@ import { fileURLToPath } from 'node:url';
 import { computePHash, hammingDistance } from './phash.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const FIXTURES_DIR = path.join(__dirname, '..', '..', 'extractor', 'output');
+const FIXTURES_DIR = path.join(__dirname, '..', '..', '..', 'app', 'static', 'pai-images');
 
 describe('computePHash', () => {
   it('同一画像のpHashは一致する', async () => {
-    const imagePath = path.join(FIXTURES_DIR, '003_muse_honoka.png');
+    const imagePath = path.join(FIXTURES_DIR, '003_livelive_honoka.png');
     const hash1 = await computePHash(imagePath);
     const hash2 = await computePHash(imagePath);
     assert.equal(hash1, hash2);
   });
 
   it('pHashは16文字の16進数文字列を返す', async () => {
-    const imagePath = path.join(FIXTURES_DIR, '003_muse_honoka.png');
+    const imagePath = path.join(FIXTURES_DIR, '003_livelive_honoka.png');
     const hash = await computePHash(imagePath);
     assert.equal(hash.length, 16);
     assert.match(hash, /^[0-9a-f]{16}$/);
   });
 
   it('異なる画像は異なるpHashを返す', async () => {
-    const hash1 = await computePHash(path.join(FIXTURES_DIR, '003_muse_honoka.png'));
-    const hash2 = await computePHash(path.join(FIXTURES_DIR, '014_aqours_chika.png'));
+    const hash1 = await computePHash(path.join(FIXTURES_DIR, '003_livelive_honoka.png'));
+    const hash2 = await computePHash(path.join(FIXTURES_DIR, '014_sunshine_chika.png'));
     assert.notEqual(hash1, hash2);
   });
 });
@@ -53,15 +53,15 @@ describe('hammingDistance', () => {
 describe('pHash品質', () => {
   it('似ているパイや近接ペアをすべて区別できる', async () => {
     const pairs = [
-      // 似ているパイ
-      ['025_nijigasaki_yu.png', '032_nijigasaki_setsuna.png'],
+      // 見た目で似ているパイ
+      ['025_nijigaku_yu.png', '032_nijigaku_setsuna.png'],
       ['063_musical_rurika.png', '064_musical_yuzuha.png'],
       // ハミング距離が最も近い上位5ペア
-      ['002_muse_otonokizaka.png', '061_musical_musical.png'],
-      ['003_muse_honoka.png', '007_muse_rin.png'],
-      ['003_muse_honoka.png', '069_musical_misuzu.png'],
-      ['006_muse_umi.png', '009_muse_nozomi.png'],
-      ['007_muse_rin.png', '010_muse_hanayo.png'],
+      ['006_livelive_umi.png', '009_livelive_nozomi.png'],
+      ['010_livelive_hanayo.png', '011_livelive_nico.png'],
+      ['007_livelive_rin.png', '010_livelive_hanayo.png'],
+      ['002_livelive_otonokizaka.png', '073_ikizu_ikizuraibu.png'],
+      ['003_livelive_honoka.png', '069_musical_misuzu.png'],
     ];
 
     for (const [a, b] of pairs) {
