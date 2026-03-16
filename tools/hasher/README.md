@@ -1,38 +1,23 @@
-# pai-hasher
+# hasher
 
-パイ画像のpHash（知覚ハッシュ）を事前計算するツール。
+パイ画像のpHash(知覚ハッシュ)を事前計算するツール。
 
-`tools/extractor/output/` の84枚のPNG画像からpHashを計算し、`app/static/pais/hashes.json` に出力する。アプリのパイ識別処理（ハミング距離比較）で参照データとして使用される。
+`../../app/static/pai-images/` の84枚のPNG画像からpHashを計算し、`app/static/pai-hashes.json` に出力する。アプリのパイ識別処理(ハミング距離比較)で参照データとして使用される。
 
 ## 使い方
 
-```bash
-cd tools/hasher
+```sh
 npm install
+npm start -- ../../app/static/pai-images/ ../../app/static/pai-hashes.json
 
-# デフォルト（extractor/output/ → app/static/pais/hashes.json）
-npm start
-
-# 入出力を指定
-npm start -- --input /path/to/images --output /path/to/hashes.json
-npm start -- -i /path/to/images -o /path/to/hashes.json
+# npm test
 ```
 
-```bash
-# テスト
+## 入力
 
-npm test
-```
+extractorによって出力されたパイ画像のあるディレクトリ
 
-### オプション
-
-| オプション | 短縮 | 説明                        | デフォルト                    |
-| ---------- | ---- | --------------------------- | ----------------------------- |
-| `--input`  | `-i` | 入力ディレクトリ（PNG画像） | `tools/extractor/output/`     |
-| `--output` | `-o` | 出力ファイルパス            | `app/static/pais/hashes.json` |
-| `--help`   | `-h` | ヘルプ表示                  | -                             |
-
-## 出力形式
+## 出力
 
 ```json
 {
@@ -60,12 +45,12 @@ pHash（DCTベース知覚ハッシュ）:
 
 最も近いペア上位5件：
 
-| 距離 | パイA                    | パイB               |
-| ---- | ------------------------ | ------------------- |
-| 8    | 音ノ木坂学院(エンブレム) | Musical(エンブレム) |
-| 10   | 高坂穂乃果               | 星空凛              |
-| 10   | 高坂穂乃果               | 三船美鈴            |
-| 10   | 園田海未                 | 東條希              |
-| 10   | 星空凛                   | 小泉花陽            |
+| 距離 | パイA                    | パイB                    |
+| ---- | ------------------------ | ------------------------ |
+| 8    | 園田海未                 | 東條希                   |
+| 8    | 小泉花陽                 | 矢澤にこ                 |
+| 10   | 星空凛                   | 小泉花陽                 |
+| 12   | 音ノ木坂学院(エンブレム) | 生きずらいぶ(エンブレム) |
+| 12   | 高坂穂乃果               | 三船美鈴                 |
 
 最小ハミング距離は8。64bitのうち8bit差なので約87%一致しています。実際のマッチングでは撮影画像のpHashと84枚を比較して最小距離を選ぶので、撮影画像のpHashが参照データ±4bit以内に収まれば正しく識別できます。距離8の余裕があるので現時点では問題なしです。
