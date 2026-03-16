@@ -29,7 +29,7 @@ function charTiles(lefts: number[], top: number): TileDef[] {
 // --- Tile labels per group ---
 // Order: group-emblem, school-emblem, characters (left-to-right, top-to-bottom)
 const TILE_LABELS: Record<string, TileLabel[]> = {
-  muse: [
+  livelive: [
     ['muse', "μ's"],
     ['otonokizaka', '音ノ木坂学院'],
     ['honoka', '高坂穂乃果'],
@@ -42,7 +42,7 @@ const TILE_LABELS: Record<string, TileLabel[]> = {
     ['hanayo', '小泉花陽'],
     ['nico', '矢澤にこ'],
   ],
-  aqours: [
+  sunshine: [
     ['aqours', 'Aqours'],
     ['uranohoshi', '浦の星女学院'],
     ['chika', '高海千歌'],
@@ -55,9 +55,9 @@ const TILE_LABELS: Record<string, TileLabel[]> = {
     ['mari', '小原鞠莉'],
     ['ruby', '黒澤ルビィ'],
   ],
-  nijigasaki: [
-    ['doukoukai', 'スクールアイドル同好会'],
-    ['nijigaku', '虹ヶ咲学園'],
+  nijigaku: [
+    ['doukoukai', '虹ヶ咲学園スクールアイドル同好会'],
+    ['nijigasaki', '虹ヶ咲学園'],
     ['yu', '高咲侑'],
     ['ayumu', '上原歩夢'],
     ['kasumi', '中須かすみ'],
@@ -72,7 +72,7 @@ const TILE_LABELS: Record<string, TileLabel[]> = {
     ['mia', 'ミア・テイラー'],
     ['lanzhu', '鐘嵐珠'],
   ],
-  liella: [
+  superstar: [
     ['liella', 'Liella!'],
     ['yuigaoka', '結ヶ丘女子高等学校'],
     ['kanon', '澁谷かのん'],
@@ -87,45 +87,45 @@ const TILE_LABELS: Record<string, TileLabel[]> = {
     ['wien', 'ウィーン・マルガレーテ'],
     ['tomari', '鬼塚冬毬'],
   ],
-  hasunosora: [
+  hasujo: [
+    ['club', '蓮ノ空女学院スクールアイドルクラブ'],
     ['hasunosora', '蓮ノ空女学院'],
-    ['kosho', '蓮ノ空女学院校章'],
     ['kaho', '日野下花帆'],
     ['sayaka', '村野さやか'],
-    ['kozue', '乙宗梢'],
-    ['tsuzuri', '夕霧綴理'],
     ['rurino', '大沢瑠璃乃'],
     ['ginko', '百生吟子'],
     ['kosuzu', '徒町小鈴'],
     ['hime', '安養寺姫芽'],
+    ['ceras', 'セラス柳田リリエンフェルト'],
+    ['izumi', '桂木泉'],
   ],
   musical: [
     ['musical', 'SCHOOL IDOL MUSICAL'],
-    ['tsubakisakihana', '椿咲花女子高校'],
+    ['takizakura_tsubakisakihana', '滝桜女学院 椿咲花女子高校'],
     ['rurika', '椿ルリカ'],
-    ['yuzuha', '堂ユズハ'],
+    ['yuzuha', '皇ユズハ'],
     ['yukino', '北条ユキノ'],
     ['hikaru', '天草ヒカル'],
     ['maya', '三笠マーヤ'],
     ['anzu', '滝沢アンズ'],
     ['misuzu', '若槻ミスズ'],
-    ['toa', '米楠トア'],
-    ['rena', '鈴員レナ'],
+    ['toa', '来栖トア'],
+    ['rena', '鈴賀レナ'],
     ['sayaka', '晴風サヤカ'],
   ],
-  bluebird: [
+  ikizu: [
     ['ikizuraibu', 'いきづらい部!'],
     ['love_gakuin', 'Love学院高等学校'],
     ['poruka', '高橋ポルカ'],
     ['mai', '麻布麻衣'],
-    ['rei', '五椚玲'],
+    ['akira', '五桐玲'],
     ['hanabi', '駒形花火'],
-    ['kiseki', '金澤奇跡'],
+    ['miracle', '金澤奇跡'],
     ['noriko', '調布のりこ'],
     ['yukuri', '春宮ゆくり'],
-    ['kaguya', '此花輝夜'],
-    ['maaya', '山田真綾'],
-    ['rinne', '佐々木麟音'],
+    ['aurora', '此花輝夜'],
+    ['midori', '山田真緑'],
+    ['shion', '佐々木翔音'],
   ],
 };
 
