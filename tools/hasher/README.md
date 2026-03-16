@@ -1,38 +1,23 @@
-# pai-hasher
+# hasher
 
-パイ画像のpHash（知覚ハッシュ）を事前計算するツール。
+パイ画像のpHash(知覚ハッシュ)を事前計算するツール。
 
-`tools/extractor/output/` の84枚のPNG画像からpHashを計算し、`app/static/pais/hashes.json` に出力する。アプリのパイ識別処理（ハミング距離比較）で参照データとして使用される。
+`../../app/static/pai-images/` の84枚のPNG画像からpHashを計算し、`app/static/pai-hashes.json` に出力する。アプリのパイ識別処理(ハミング距離比較)で参照データとして使用される。
 
 ## 使い方
 
-```bash
-cd tools/hasher
+```sh
 npm install
+npm start -- ../../app/static/pai-images/ ../../app/static/pai-hashes.json
 
-# デフォルト（extractor/output/ → app/static/pais/hashes.json）
-npm start
-
-# 入出力を指定
-npm start -- --input /path/to/images --output /path/to/hashes.json
-npm start -- -i /path/to/images -o /path/to/hashes.json
+# npm test
 ```
 
-```bash
-# テスト
+## 入力
 
-npm test
-```
+extractorによって出力されたパイ画像のあるディレクトリ
 
-### オプション
-
-| オプション | 短縮 | 説明                        | デフォルト                    |
-| ---------- | ---- | --------------------------- | ----------------------------- |
-| `--input`  | `-i` | 入力ディレクトリ（PNG画像） | `tools/extractor/output/`     |
-| `--output` | `-o` | 出力ファイルパス            | `app/static/pais/hashes.json` |
-| `--help`   | `-h` | ヘルプ表示                  | -                             |
-
-## 出力形式
+## 出力
 
 ```json
 {

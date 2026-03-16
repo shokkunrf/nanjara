@@ -1,48 +1,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { parseArgs } from 'node:util';
-import { fileURLToPath } from 'node:url';
 import { computePHash } from './phash.ts';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-const DEFAULT_INPUT_DIR = path.join(__dirname, '..', '..', 'extractor', 'output');
-const DEFAULT_OUTPUT_FILE = path.join(
-  __dirname,
-  '..',
-  '..',
-  '..',
-  'app',
-  'static',
-  'pais',
-  'hashes.json',
-);
-
 function usage(): never {
-  console.log(`Usage: npm start -- [options]
-
-Options:
-  --input, -i   入力ディレクトリ（PNG画像があるフォルダ）
-                デフォルト: tools/extractor/output/
-  --output, -o  出力ファイルパス（hashes.json）
-                デフォルト: app/static/pais/hashes.json
-  --help, -h    ヘルプを表示`);
-  process.exit(0);
+  console.log(`Usage: npm start -- <入力ディレクトリ> <出力ファイル>`);
+  process.exit(1);
 }
 
 async function main(): Promise<void> {
-  const { values } = parseArgs({
-    options: {
-      input: { type: 'string', short: 'i' },
-      output: { type: 'string', short: 'o' },
-      help: { type: 'boolean', short: 'h' },
-    },
-  });
+  const [inputDir, outputFile] = process.argv.slice(2).map((p) => path.resolve(p));
 
-  if (values.help) usage();
-
-  const inputDir = values.input ? path.resolve(values.input) : DEFAULT_INPUT_DIR;
-  const outputFile = values.output ? path.resolve(values.output) : DEFAULT_OUTPUT_FILE;
+  if (!inputDir || !outputFile) usage();
 
   if (!fs.existsSync(inputDir)) {
     console.error(`入力ディレクトリが見つかりません: ${inputDir}`);

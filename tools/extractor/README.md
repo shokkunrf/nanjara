@@ -4,26 +4,20 @@
 
 ## 使い方
 
-```bash
+```sh
 npm install
-npm start -- <source.png> <output-dir>
-```
-
-### 例
-
-```bash
-npm start -- input/_page2.png output
+npm start -- input/_page2.png ../../app/static/pai-images/
 ```
 
 ## 入力
 
-説明書のパイ一覧ページ画像（5453x7665 PNG）。
+説明書のパイ一覧ページ画像(5453x7665 PNG)
 
 座標はこの画像レイアウトにハードコードされているため、別の画像を使う場合は `SERIES` の値を調整する必要がある。
 
 ## 出力
 
-`<output-dir>` に 84 枚の PNG（174x236px）を出力する。
+`<output-dir>`に84枚のPNG(174x236px)を出力する。
 
 ファイル名: `{連番}_{シリーズ}_{名前}.png`  
 シリーズ名は公式サイトURLを参考
