@@ -4,7 +4,12 @@ import path from 'node:path';
 
 const [source, outputDir] = process.argv.slice(2);
 if (!source || !outputDir) {
-  console.error('Usage: tsx src/main.ts <source.png> <output-dir>');
+  console.error('Usage: npm start -- <source.png> <output-dir>');
+  process.exit(1);
+}
+
+if (!fs.existsSync(source)) {
+  console.error(`File not found: ${source}`);
   process.exit(1);
 }
 
@@ -138,4 +143,7 @@ async function main() {
   }
 }
 
-main().catch(console.error);
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

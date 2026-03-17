@@ -3,7 +3,7 @@ import path from 'node:path';
 import { computePHash } from './phash.ts';
 
 function usage(): never {
-  console.log(`Usage: npm start -- <入力ディレクトリ> <出力ファイル>`);
+  console.error('Usage: npm start -- <input-dir> <output-file>');
   process.exit(1);
 }
 
@@ -13,7 +13,7 @@ async function main(): Promise<void> {
   if (!inputDir || !outputFile) usage();
 
   if (!fs.existsSync(inputDir)) {
-    console.error(`入力ディレクトリが見つかりません: ${inputDir}`);
+    console.error(`Directory not found: ${inputDir}`);
     process.exit(1);
   }
 
@@ -28,26 +28,22 @@ async function main(): Promise<void> {
     .sort();
 
   if (files.length === 0) {
-    console.error(`PNG画像が見つかりません: ${inputDir}`);
+    console.error(`PNG files not found: ${inputDir}`);
     process.exit(1);
   }
 
-  console.log(`入力: ${inputDir}`);
-  console.log(`出力: ${outputFile}`);
-  console.log(`${files.length}枚のPNG画像を処理します\n`);
-
   const hashes: Record<string, string> = {};
 
-  for (let i = 0; i < files.length; i++) {
-    const filename = files[i];
+  for (const filename of files) {
     const hash = await computePHash(path.join(inputDir, filename));
     hashes[filename] = hash;
-    console.log(`[${i + 1}/${files.length}] ${filename}: ${hash}`);
+    console.log(filename);
   }
 
   fs.writeFileSync(outputFile, JSON.stringify(hashes, null, 2));
-  console.log(`\nhashes.json を出力しました: ${outputFile}`);
-  console.log(`処理画像数: ${Object.keys(hashes).length}`);
 }
 
-main();
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
