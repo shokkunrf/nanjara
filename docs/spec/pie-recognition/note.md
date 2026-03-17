@@ -26,7 +26,6 @@ app/
 └── svelte.config.js
 tools/
 └── extractor/                   # 牌画像抽出ツール
-    ├── output/                  # 抽出済み牌画像（84枚）+ tiles.json
     └── src/main.ts
 docs/
 ├── aa.md                        # PRD
@@ -45,9 +44,10 @@ docs/
 
 ### 牌画像データ
 - 84枚のPNG画像（106x143px → 統一高さにリサイズ）
-- 7グループ: μ's(11), Aqours(11), 虹ヶ咲(15), Liella!(13), 蓮ノ空(10), Musical(12), Bluebird(12)
+- 7グループ: livelive(11), sunshine(11), nijigaku(15), superstar(13), hasujo(10), musical(12), ikizu(12)
 - 各グループ: グループエンブレム + 学校エンブレム + キャラクター牌
-- tiles.json: ファイル名 → 日本語表示名のマッピング
+- pai-details.json: ファイル名 → {name, yaku[]} のマッピング
+- pai-hashes.json: ファイル名 → pHashのマッピング
 
 ## ユビキタス言語
 

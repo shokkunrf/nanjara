@@ -1,6 +1,7 @@
 # パイ認識アプリ データフロー図
 
 **作成日**: 2026-03-14
+**更新日**: 2026-03-17（CameraMode縮小）
 **関連アーキテクチャ**: [architecture.md](architecture.md)
 **関連要件定義**: [requirements.md](../../spec/pie-recognition/requirements.md)
 
@@ -23,7 +24,7 @@ flowchart LR
 
     subgraph 事前処理[事前処理 tools/hasher]
         E[パイ画像 84枚] --> F[pHash計算]
-        F --> G[hashes.json]
+        F --> G[pai-hashes.json]
     end
 
     G --> C
@@ -67,7 +68,7 @@ sequenceDiagram
 
 **信頼性**: 🔵 *要件定義・設計ヒアリングより確定*
 
-**関連要件**: REQ-001, REQ-002, REQ-007, REQ-008, NFR-001
+**関連要件**: REQ-001, REQ-002, REQ-007, NFR-001
 
 ```mermaid
 sequenceDiagram
@@ -76,7 +77,7 @@ sequenceDiagram
     participant OCV as OpenCV.js
     participant PD as PaiDetector
     participant PR as PaiRecognizer
-    participant Hash as hashes.json
+    participant Hash as pai-hashes.json
     participant RR as RecognitionResult
 
     U->>CR: 「認識する」ボタンタップ
@@ -108,7 +109,7 @@ sequenceDiagram
     PR->>PR: 識別結果（パイID[]）生成
 
     PR->>RR: 認識結果データ
-    RR->>U: 認識結果画面表示
+    RR->>U: 認識結果画面表示（/result へ遷移）
 ```
 
 **詳細ステップ**:
@@ -119,14 +120,14 @@ sequenceDiagram
 5. アスペクト比・面積フィルタでパイらしい矩形のみ抽出（8-9枚想定）
 6. **Matオブジェクトを解放**（メモリリーク防止）
 7. **パイ識別**: 各切り出し画像のpHashを計算
-8. 事前処理済みの84種類のpHashとハミング距離を比較
+8. 事前処理済みの84種類のpHash（`pai-hashes.json`）とハミング距離を比較
 9. 最小距離のパイIDを識別結果として返す
 
 ---
 
 ### 機能3: 加点役判定・ジャラ計算 🔵
 
-**信頼性**: 🔵 *要件定義REQ-004, REQ-005, REQ-006 + manual.pdf解読済み + ユーザヒアリングより確定*
+**信頼性**: 🔵 *要件定義REQ-004, REQ-005, REQ-006 + ユーザヒアリング（2026-03-17 yaku配列方式確定）より*
 
 **関連要件**: REQ-004, REQ-005, REQ-006
 
@@ -135,26 +136,51 @@ sequenceDiagram
     participant RR as RecognitionResult
     participant SE as ScoringEngine
     participant Rules as rules.json
-    participant Pais as pais.json
+    participant PaiData as pai-details.json
 
     RR->>SE: 認識された手牌（PaiId[]）
-    SE->>Pais: パイ属性データ読み込み（初回のみ）
+    SE->>PaiData: パイデータ読み込み（初回のみ）
     SE->>Rules: ルールデータ読み込み（初回のみ）
-    SE->>SE: 手牌のパイ属性を参照
-    SE->>SE: 各加点役の属性条件を評価
-    SE->>SE: 該当する加点役を抽出
-    SE->>SE: 各加点役の固定ジャラを合算
+    SE->>SE: 各パイのyaku配列を取得
+    SE->>SE: 全yakuの出現回数をカウント
+    SE->>SE: 各ルールのrequiredCountと照合
+    SE->>SE: 該当するルールのjaraを合算
     SE->>RR: 判定結果（加点役[] + 合計ジャラ）
     RR->>RR: 結果表示を更新
 ```
 
 **詳細ステップ**:
 1. 認識された手牌のID配列をScoringEngineに渡す
-2. pais.jsonから各パイの属性データ（ユニット・学年・誕生月等）を参照（初回のみ、以降キャッシュ）
-3. rules.jsonから加点役の定義を読み込み（初回のみ、以降キャッシュ）
-4. 手牌の各パイの属性を取得し、各加点役の条件（同一属性のパイが一定枚数等）を評価
-5. 該当する加点役を抽出し、各加点役の固定ジャラ値を単純合算
-6. 結果画面に加点役名・個別ジャラ・合計ジャラを表示
+2. `pai-details.json` から各パイの `{name, yaku[]}` を参照（初回のみ、以降キャッシュ）
+3. `rules.json` から加点役の定義 `[{name, requiredCount, jara}]` を読み込み（初回のみ、以降キャッシュ）
+4. 手牌の全パイのyaku配列を集約し、各yaku名の出現回数をカウント
+5. 各ルールについて、出現回数 >= requiredCount であればそのルールが成立
+6. 該当する加点役のjaraを単純合算
+7. 結果画面に加点役名・個別ジャラ・合計ジャラを表示
+
+#### 判定ロジック例 🔵
+
+```
+手牌: [高坂穂乃果, 南ことり, 園田海未, ...]
+
+高坂穂乃果の yaku: ["ラブライブ！", "μ's", "Printemps", "2年生", ...]
+南ことりの yaku:   ["ラブライブ！", "μ's", "Printemps", "2年生", ...]
+園田海未の yaku:   ["ラブライブ！", "μ's", "lily white", "2年生", ...]
+
+yaku出現カウント:
+  "ラブライブ！": 3
+  "μ's": 3
+  "Printemps": 2
+  "2年生": 3
+  "lily white": 1
+
+rules.json照合:
+  {name: "μ's", requiredCount: 2, jara: 10} → 3 >= 2 → 成立 → +10ジャラ
+  {name: "Printemps", requiredCount: 2, jara: 15} → 2 >= 2 → 成立 → +15ジャラ
+  {name: "lily white", requiredCount: 2, jara: 15} → 1 < 2 → 不成立
+
+合計ジャラ: 25
+```
 
 ---
 
@@ -166,23 +192,24 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    A[tools/extractor/output/<br>84枚のPNG + tiles.json] -->|コピー| B[app/static/pais/<br>84枚のPNG + pais.json]
+    A[tools/extractor/output/<br>84枚のPNG] -->|コピー| B[app/static/pai-images/<br>84枚のPNG]
     A -->|入力| C[tools/hasher/]
-    C -->|pHash計算| D[各画像のpHashを計算]
-    D -->|出力| E[app/static/pais/hashes.json]
+    C -->|DCTベースpHash計算| D[各画像のpHashを計算]
+    D -->|出力| E[app/static/pai-hashes.json]
 
-    F[docs/official/manual.pdf] -->|ルール読み取り| G[加点役・ジャラ定義]
-    G -->|JSON構造化| H[app/static/rules/rules.json]
+    F[tools/extractor/output/<br>pai-details.json] -->|コピー| G[app/static/pai-details.json]
 
-    I[キャラクター属性情報] -->|pais.jsonに追加| B
+    H[docs/official/manual.pdf] -->|ルール読み取り| I[加点役・ジャラ定義]
+    I -->|JSON構造化| J[app/static/rules.json]
 ```
 
-**詳細ステップ**:
-1. `tools/extractor/output/` からパイ画像84枚 + tiles.json を `app/static/pais/` にコピー（pais.jsonにリネーム）
-2. pais.jsonに各パイの属性情報（ユニット・学年・誕生月等）を追加
-3. `tools/hasher/` で84枚の画像を読み込み、pHashを計算
-4. `app/static/pais/hashes.json` に `{ filename: pHashValue }` 形式で出力
-5. manual.pdfからルールを解読し、`app/static/rules/rules.json` に構造化
+**詳細ステップ（✅ = 実施済み）**:
+1. ✅ `tools/extractor/` でパイ画像84枚を切り出し（174x236px PNG）
+2. ✅ `app/static/pai-images/` に84枚のPNGを配置
+3. ✅ `app/static/pai-details.json` にパイメタデータ（name + yaku配列）を配置
+4. ✅ `tools/hasher/` で84枚の画像のDCTベースpHashを計算
+5. ✅ `app/static/pai-hashes.json` に `{ "filename": "pHash16進数" }` 形式で出力
+6. ⬜ manual.pdfからルールを解読し、`app/static/rules.json` に `[{name, requiredCount, jara}]` 形式で構造化
 
 ---
 
@@ -192,7 +219,7 @@ flowchart TD
 
 **信頼性**: 🔵 *アーキテクチャ設計より*
 
-- **加点役判定**: パイ属性とルールデータの照合はCPU軽量のため同期処理
+- **加点役判定**: yaku配列のカウントとルール照合はCPU軽量のため同期処理
 - **ジャラ計算**: 固定点数の単純加算処理のため同期処理
 - **pHash比較**: ハミング距離計算は整数演算のみで高速
 
@@ -203,7 +230,7 @@ flowchart TD
 - **OpenCV.js先読み**: WASM ~8MBをプレビュー画面表示時にバックグラウンドでロード開始（`import()` による動的インポート）
 - **画像読み込み**: Canvas APIでの画像ロードは非同期
 - **パイ検出**: OpenCV.jsの処理は同期だが、全体フローはasync/awaitで管理
-- **hashes.json/pais.json/rules.jsonの読み込み**: fetch()で非同期取得（初回のみ、以降メモリキャッシュ）
+- **pai-details.json/pai-hashes.json/rules.jsonの読み込み**: fetch()で非同期取得（初回のみ、以降メモリキャッシュ）
 
 ## OpenCV.js ロード戦略 🔵
 
@@ -264,29 +291,38 @@ flowchart TD
 
 ## 状態管理フロー 🔵
 
-**信頼性**: 🔵 *既存実装パターン（Svelte 5 runes）より*
+**信頼性**: 🔵 *既存実装パターン（Svelte 5 runes）+ ユーザヒアリング（2026-03-17）より*
+
+### /camera ルート内の状態（CameraMode） 🔵
 
 ```mermaid
 stateDiagram-v2
-    [*] --> capture: アプリ起動
+    [*] --> capture: /camera 表示
     capture --> preview: 撮影完了
     preview --> capture: 再撮影
-    preview --> recognizing: 「認識する」タップ
-    recognizing --> result: 認識成功
-    recognizing --> preview: 認識失敗
-    result --> capture: 再撮影
 ```
 
-**Camera.svelte の状態拡張**:
 ```
-type CameraMode = 'capture' | 'preview' | 'recognizing' | 'result';
+type CameraMode = 'capture' | 'preview';
 ```
 
-既存の `'capture' | 'result'` を4状態に拡張:
-- `capture`: カメラ撮影画面
-- `preview`: 撮影画像確認（既存の `result` を改名）
-- `recognizing`: 認識処理中（ローディング）
-- `result`: 認識結果表示（新規）
+`recognizing` と `result` は CameraMode に含めない:
+- **認識処理中**: `CameraResult` コンポーネント内のローカル状態（`isRecognizing`）で制御。ローディング表示を出し、完了後に `/result` へルート遷移
+- **認識結果**: `/result` ルート（別ページ）で表示
+
+### /camera → /result のルート遷移 🔵
+
+```mermaid
+sequenceDiagram
+    participant CR as CameraResult (/camera)
+    participant Router as SvelteKit Router
+    participant RR as RecognitionResult (/result)
+
+    CR->>CR: isRecognizing = true（ローディング表示）
+    CR->>CR: 認識処理実行
+    CR->>Router: goto('/result', { state: { recognitionResult } })
+    Router->>RR: 認識結果データを渡して遷移
+```
 
 ## 静的データの読み込み戦略 🟡
 
@@ -296,18 +332,18 @@ type CameraMode = 'capture' | 'preview' | 'recognizing' | 'result';
 flowchart TD
     A[「認識する」ボタンタップ] --> B{データキャッシュ済み?}
     B -->|Yes| E[キャッシュから参照]
-    B -->|No| C[pais.json, hashes.json, rules.json を fetch]
+    B -->|No| C[pai-details.json, pai-hashes.json, rules.json を fetch]
     C --> D[メモリにキャッシュ]
     D --> E
     E --> F[認識処理で使用]
 ```
 
-- **初回認識時**: pais.json, hashes.json, rules.json を fetch してメモリにキャッシュ
+- **初回認識時**: pai-details.json, pai-hashes.json, rules.json を fetch してメモリにキャッシュ
 - **以降の認識**: キャッシュ済みデータを参照（追加fetch不要）
-- **データサイズ見積り**:
-  - pais.json: ~10KB（84件のメタデータ + 属性情報）
-  - hashes.json: ~10KB（84件のpHash値）
-  - rules.json: ~10-30KB（30個以上の加点役定義）
+- **データサイズ実績**:
+  - pai-details.json: ~14KB（84件のメタデータ + yaku配列）🔵 *実測値*
+  - pai-hashes.json: ~4KB（84件のpHash値）🔵 *実測値*
+  - rules.json: ~5-15KB（30個以上の加点役定義）🟡 *推測*
 
 ## メモリ管理 🟡
 
@@ -344,8 +380,8 @@ async function detectPais(imageSource: string): Promise<DetectedRegion[]> {
 
 ## 信頼性レベルサマリー
 
-- 🔵 青信号: 11件 (73%)
-- 🟡 黄信号: 4件 (27%)
+- 🔵 青信号: 12件 (75%)
+- 🟡 黄信号: 4件 (25%)
 - 🔴 赤信号: 0件 (0%)
 
 **品質評価**: 高品質
