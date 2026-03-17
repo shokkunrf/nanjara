@@ -1,2 +1,3 @@
 docs/memo.md
-docs/official
+docs/official/*
+!docs/official/.gitkeep
