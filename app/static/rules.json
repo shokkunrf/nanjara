@@ -1,0 +1,309 @@
+[
+  {
+    "name": "ラブライブ！",
+    "requiredCount": 3,
+    "jara": 20000
+  },
+  {
+    "name": "ラブライブ！",
+    "requiredCount": 9,
+    "jara": 360000
+  },
+  {
+    "name": "ラブライブ！サンシャイン!!",
+    "requiredCount": 3,
+    "jara": 20000
+  },
+  {
+    "name": "ラブライブ！サンシャイン!!",
+    "requiredCount": 9,
+    "jara": 360000
+  },
+  {
+    "name": "ラブライブ！虹ヶ咲学園スクールアイドル同好会",
+    "requiredCount": 3,
+    "jara": 20000
+  },
+  {
+    "name": "ラブライブ！虹ヶ咲学園スクールアイドル同好会",
+    "requiredCount": 9,
+    "jara": 360000
+  },
+  {
+    "name": "ラブライブ！スーパースター!!",
+    "requiredCount": 3,
+    "jara": 20000
+  },
+  {
+    "name": "ラブライブ！スーパースター!!",
+    "requiredCount": 9,
+    "jara": 360000
+  },
+  {
+    "name": "ラブライブ！蓮ノ空女学院スクールアイドルクラブ",
+    "requiredCount": 3,
+    "jara": 20000
+  },
+  {
+    "name": "ラブライブ！蓮ノ空女学院スクールアイドルクラブ",
+    "requiredCount": 9,
+    "jara": 360000
+  },
+  {
+    "name": "スクールアイドルミュージカル",
+    "requiredCount": 3,
+    "jara": 20000
+  },
+  {
+    "name": "スクールアイドルミュージカル",
+    "requiredCount": 9,
+    "jara": 360000
+  },
+  {
+    "name": "イキヅライブ！",
+    "requiredCount": 3,
+    "jara": 20000
+  },
+  {
+    "name": "イキヅライブ！",
+    "requiredCount": 9,
+    "jara": 360000
+  },
+
+  {
+    "name": "1年生",
+    "requiredCount": 5,
+    "jara": 60000
+  },
+  {
+    "name": "2年生",
+    "requiredCount": 5,
+    "jara": 60000
+  },
+  {
+    "name": "3年生",
+    "requiredCount": 5,
+    "jara": 60000
+  },
+  {
+    "name": "1月生まれ",
+    "requiredCount": 3,
+    "jara": 60000
+  },
+  {
+    "name": "2月生まれ",
+    "requiredCount": 3,
+    "jara": 60000
+  },
+  {
+    "name": "3月生まれ",
+    "requiredCount": 4,
+    "jara": 120000
+  },
+  {
+    "name": "4月生まれ",
+    "requiredCount": 3,
+    "jara": 60000
+  },
+  {
+    "name": "5月生まれ",
+    "requiredCount": 4,
+    "jara": 120000
+  },
+  {
+    "name": "6月生まれ",
+    "requiredCount": 3,
+    "jara": 60000
+  },
+  {
+    "name": "7月生まれ",
+    "requiredCount": 4,
+    "jara": 120000
+  },
+  {
+    "name": "8月生まれ",
+    "requiredCount": 3,
+    "jara": 60000
+  },
+  {
+    "name": "9月生まれ",
+    "requiredCount": 3,
+    "jara": 60000
+  },
+  {
+    "name": "10月生まれ",
+    "requiredCount": 4,
+    "jara": 120000
+  },
+  {
+    "name": "11月生まれ",
+    "requiredCount": 4,
+    "jara": 120000
+  },
+  {
+    "name": "12月生まれ",
+    "requiredCount": 4,
+    "jara": 120000
+  },
+  {
+    "name": "Printemps",
+    "requiredCount": 3,
+    "jara": 120000
+  },
+  {
+    "name": "BiBi",
+    "requiredCount": 3,
+    "jara": 120000
+  },
+  {
+    "name": "lily white",
+    "requiredCount": 3,
+    "jara": 120000
+  },
+  {
+    "name": "CYaRon!",
+    "requiredCount": 3,
+    "jara": 120000
+  },
+  {
+    "name": "Guilty Kiss",
+    "requiredCount": 3,
+    "jara": 120000
+  },
+  {
+    "name": "AZALEA",
+    "requiredCount": 3,
+    "jara": 120000
+  },
+  {
+    "name": "A・ZU・NA",
+    "requiredCount": 3,
+    "jara": 120000
+  },
+  {
+    "name": "QU4RTZ",
+    "requiredCount": 4,
+    "jara": 150000
+  },
+  {
+    "name": "DiverDiva",
+    "requiredCount": 2,
+    "jara": 90000
+  },
+  {
+    "name": "R3BIRTH",
+    "requiredCount": 3,
+    "jara": 120000
+  },
+  {
+    "name": "5yncri5e!",
+    "requiredCount": 5,
+    "jara": 180000
+  },
+  {
+    "name": "CatChu!",
+    "requiredCount": 3,
+    "jara": 120000
+  },
+  {
+    "name": "KALEIDOSCORE",
+    "requiredCount": 3,
+    "jara": 120000
+  },
+  {
+    "name": "スリーズブーケ",
+    "requiredCount": 2,
+    "jara": 90000
+  },
+  {
+    "name": "DOLLCHESTRA",
+    "requiredCount": 2,
+    "jara": 90000
+  },
+  {
+    "name": "みらくらぱーく！",
+    "requiredCount": 2,
+    "jara": 90000
+  },
+  {
+    "name": "Edel Note",
+    "requiredCount": 2,
+    "jara": 90000
+  },
+
+  {
+    "name": "国士無双",
+    "requiredCount": 9,
+    "jara": 420000
+  },
+  {
+    "name": "主人公",
+    "requiredCount": 1,
+    "jara": 20000
+  },
+  {
+    "name": "μ's",
+    "requiredCount": 9,
+    "jara": 240000
+  },
+  {
+    "name": "Aqours",
+    "requiredCount": 9,
+    "jara": 240000
+  },
+  {
+    "name": "Liella!",
+    "requiredCount": 9,
+    "jara": 240000
+  },
+  {
+    "name": "椿咲花女子高校アイドル部",
+    "requiredCount": 5,
+    "jara": 120000
+  },
+  {
+    "name": "滝桜女学院アイドル部",
+    "requiredCount": 5,
+    "jara": 120000
+  },
+  {
+    "name": "にこりんぱな",
+    "requiredCount": 3,
+    "jara": 120000
+  },
+  {
+    "name": "クーカー",
+    "requiredCount": 2,
+    "jara": 90000
+  },
+  {
+    "name": "トマカノーテ",
+    "requiredCount": 3,
+    "jara": 120000
+  },
+  {
+    "name": "CHAKI!",
+    "requiredCount": 4,
+    "jara": 150000
+  },
+  {
+    "name": "Mi×Nori=Tea",
+    "requiredCount": 2,
+    "jara": 90000
+  },
+  {
+    "name": "Plumina",
+    "requiredCount": 3,
+    "jara": 120000
+  },
+  {
+    "name": "SH1ON",
+    "requiredCount": 1,
+    "jara": 20000
+  },
+  {
+    "name": "AiScReam",
+    "requiredCount": 3,
+    "jara": 120000
+  }
+]

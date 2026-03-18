@@ -9,3 +9,4 @@ bun.lockb
 /static/*
 !/static/pai-details.json
 !/static/pai-hashes.json
+!/static/rules.json
