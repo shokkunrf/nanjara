@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { computePHash } from './phash.ts';
+import sharp from 'sharp';
+import { computePhashFromRgba } from '../../../app/src/lib/core/phash.ts';
 
 function usage(): never {
   console.error('Usage: npm start -- <input-dir> <output-file>');
@@ -35,12 +36,15 @@ async function main(): Promise<void> {
   const hashes: Record<string, string> = {};
 
   for (const filename of files) {
-    const hash = await computePHash(path.join(inputDir, filename));
-    hashes[filename] = hash;
+    const { data, info } = await sharp(path.join(inputDir, filename))
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    hashes[filename] = computePhashFromRgba(data, info.width, info.height);
     console.log(filename);
   }
 
-  fs.writeFileSync(outputFile, JSON.stringify(hashes, null, 2));
+  fs.writeFileSync(outputFile, JSON.stringify(hashes, null, 2) + '\n');
 }
 
 main().catch((e) => {

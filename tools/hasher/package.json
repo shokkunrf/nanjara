@@ -6,7 +6,6 @@
   "main": "src/main.ts",
   "scripts": {
     "start": "node src/main.ts",
-    "test": "node --test src/phash.test.ts",
     "lint": "eslint src/",
     "format": "prettier --write src/"
   },
