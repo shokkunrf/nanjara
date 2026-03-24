@@ -1,5 +1,7 @@
 /** OpenCV.js WASMのブラウザ向け遅延ローダー */
 
+import type { CV } from '@techstark/opencv-js';
+
 export class OpenCVLoadError extends Error {
   override readonly name = 'OpenCVLoadError';
 
@@ -8,30 +10,31 @@ export class OpenCVLoadError extends Error {
   }
 }
 
-let loadPromise: Promise<void> | null = null;
+let loadPromise: Promise<CV> | null = null;
 
 /**
  * 初回呼び出しでWASMのダウンロードを開始し、完了まで待機する。
  * 2回目以降はキャッシュから即座にresolveする（冪等）。
  *
+ * @returns OpenCV.js の cv オブジェクト
  * @throws {OpenCVLoadError} ロード失敗時
  *
  * @example
  * // 先読み（プレビュー画面表示時）
- * load();
+ * loadCv();
  *
  * // ロード完了を待つ（「認識する」ボタンタップ時）
- * await load();
+ * const cv = await loadCv();
  */
-export async function load(): Promise<void> {
+export async function loadCv(): Promise<CV> {
   if (loadPromise === null) {
     loadPromise = import('@techstark/opencv-js')
-      .then(() => undefined)
+      .then((m) => m.default)
       .catch((cause) => {
         loadPromise = null;
         throw new OpenCVLoadError(cause);
       });
   }
 
-  await loadPromise;
+  return loadPromise;
 }

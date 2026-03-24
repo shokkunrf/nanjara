@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('@techstark/opencv-js', () => ({}));
+const mockCv = { version: 'mock' };
+
+vi.mock('@techstark/opencv-js', () => ({ default: mockCv }));
 
 describe('opencv-loader - 正常系', () => {
   beforeEach(() => {
@@ -15,28 +17,34 @@ describe('opencv-loader - 正常系', () => {
     let importCallCount = 0;
     vi.doMock('@techstark/opencv-js', () => {
       importCallCount++;
-      return {};
+      return { default: mockCv };
     });
 
-    const { load } = await import('./opencv-loader');
+    const { loadCv } = await import('./opencv-loader');
 
-    await load();
+    await loadCv();
 
     expect(importCallCount).toBe(1);
   });
 
-  it('TC-002: load呼び出しでロード完了後にPromiseがresolveする', async () => {
-    const { load } = await import('./opencv-loader');
+  it('TC-002: load呼び出しでcvオブジェクトを返す', async () => {
+    vi.doMock('@techstark/opencv-js', () => ({ default: mockCv }));
 
-    await expect(load()).resolves.toBeUndefined();
+    const { loadCv } = await import('./opencv-loader');
+
+    const cv = await loadCv();
+
+    expect(cv).toBe(mockCv);
   });
 
   it('TC-003: ロード完了後のloadは即座にresolveする', async () => {
-    const { load } = await import('./opencv-loader');
+    vi.doMock('@techstark/opencv-js', () => ({ default: mockCv }));
 
-    await load();
+    const { loadCv } = await import('./opencv-loader');
 
-    await expect(load()).resolves.toBeUndefined();
+    await loadCv();
+
+    await expect(loadCv()).resolves.toBe(mockCv);
   });
 });
 
@@ -54,9 +62,9 @@ describe('opencv-loader - 異常系', () => {
       throw new Error('WASM load failed: network error');
     });
 
-    const { load, OpenCVLoadError } = await import('./opencv-loader');
+    const { loadCv, OpenCVLoadError } = await import('./opencv-loader');
 
-    await expect(load()).rejects.toBeInstanceOf(OpenCVLoadError);
+    await expect(loadCv()).rejects.toBeInstanceOf(OpenCVLoadError);
   });
 
   it('TC-005: ロード失敗後のリトライで正常にロードできる', async () => {
@@ -64,14 +72,14 @@ describe('opencv-loader - 異常系', () => {
       throw new Error('WASM load failed: network error');
     });
 
-    const { load, OpenCVLoadError } = await import('./opencv-loader');
+    const { loadCv, OpenCVLoadError } = await import('./opencv-loader');
 
-    await expect(load()).rejects.toBeInstanceOf(OpenCVLoadError);
+    await expect(loadCv()).rejects.toBeInstanceOf(OpenCVLoadError);
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    vi.doMock('@techstark/opencv-js', () => ({}));
+    vi.doMock('@techstark/opencv-js', () => ({ default: mockCv }));
 
-    await expect(load()).resolves.toBeUndefined();
+    await expect(loadCv()).resolves.toBe(mockCv);
   });
 });
 
@@ -88,14 +96,14 @@ describe('opencv-loader - 冪等性', () => {
     let importCallCount = 0;
     vi.doMock('@techstark/opencv-js', () => {
       importCallCount++;
-      return {};
+      return { default: mockCv };
     });
 
-    const { load } = await import('./opencv-loader');
+    const { loadCv } = await import('./opencv-loader');
 
-    await load();
-    await load();
-    await load();
+    await loadCv();
+    await loadCv();
+    await loadCv();
 
     expect(importCallCount).toBe(1);
   });
@@ -104,12 +112,12 @@ describe('opencv-loader - 冪等性', () => {
     let importCallCount = 0;
     vi.doMock('@techstark/opencv-js', () => {
       importCallCount++;
-      return {};
+      return { default: mockCv };
     });
 
-    const { load } = await import('./opencv-loader');
+    const { loadCv } = await import('./opencv-loader');
 
-    const results = await Promise.all([load(), load(), load()]);
+    const results = await Promise.all([loadCv(), loadCv(), loadCv()]);
 
     expect(results).toHaveLength(3);
     expect(importCallCount).toBe(1);
@@ -119,13 +127,13 @@ describe('opencv-loader - 冪等性', () => {
     let importCallCount = 0;
     vi.doMock('@techstark/opencv-js', () => {
       importCallCount++;
-      return {};
+      return { default: mockCv };
     });
 
-    const { load } = await import('./opencv-loader');
+    const { loadCv } = await import('./opencv-loader');
 
-    load();
-    await load();
+    loadCv();
+    await loadCv();
 
     expect(importCallCount).toBe(1);
   });
