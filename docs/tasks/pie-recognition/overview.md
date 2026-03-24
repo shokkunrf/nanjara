@@ -75,7 +75,7 @@ TASK-0002 → TASK-0004
 
 - [x] [TASK-0005: OpenCV.jsローダー実装](TASK-0005.md) - TDD 🔵
 - [x] [TASK-0006: pHash計算モジュール実装](TASK-0006.md) - TDD 🔵
-- [ ] [TASK-0007: パイ検出サービス実装](TASK-0007.md) - TDD 🟡
+- [x] [TASK-0007: パイ検出サービス実装](TASK-0007.md) - TDD 🟡
 - [ ] [TASK-0008: パイ識別サービス実装](TASK-0008.md) - TDD 🟡
 
 ### 依存関係
