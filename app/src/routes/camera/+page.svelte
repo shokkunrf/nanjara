@@ -1,16 +1,16 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import type { HistoryBackEventDetail } from '$lib/types';
-  import CameraCapture from './CameraCapture.svelte';
-  import CameraResult from './CameraResult.svelte';
+  import type { CameraMode, HistoryBackEventDetail } from '$lib/types';
+  import CameraCapture from '$lib/components/camera/CameraCapture.svelte';
+  import CameraResult from '$lib/components/camera/CameraResult.svelte';
 
-  let mode: 'capture' | 'result' = $state('capture');
+  let mode: CameraMode = $state('capture');
   let capturedImageUrl: string = $state('');
 
   function handleCapture(blob: Blob) {
     capturedImageUrl = URL.createObjectURL(blob);
-    mode = 'result';
-    history.pushState({ label: 'camera-result' }, '');
+    mode = 'preview';
+    history.pushState({ label: 'camera-preview' }, '');
   }
 
   function handleRetake() {
@@ -22,11 +22,9 @@
   }
 
   onMount(() => {
-    // Layoutからのhistory:backイベントを受け取る
     const handleBack = ((e: CustomEvent<HistoryBackEventDetail>) => {
-      if (mode === 'result') {
+      if (mode === 'preview') {
         handleRetake();
-        // 処理済みを通知（Layoutの離脱確認を抑止）
         e.detail.prevented = true;
       }
     }) as EventListener;
