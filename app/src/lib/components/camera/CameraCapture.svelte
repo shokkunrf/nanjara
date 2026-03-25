@@ -6,7 +6,7 @@
   const IDEAL_HEIGHT = 1080;
   const JPEG_QUALITY = 0.92;
 
-  let { oncapture }: { oncapture: (blob: Blob) => void } = $props();
+  let { oncapture, onclose }: { oncapture: (blob: Blob) => void; onclose: () => void } = $props();
 
   let videoElement: HTMLVideoElement | undefined = $state();
   let canvasElement: HTMLCanvasElement | undefined;
@@ -106,11 +106,14 @@
   {/snippet}
 
   {#snippet controls()}
-    {#if !errorMessage}
-      <button class="shutter" onclick={capture} disabled={!stream || capturing} aria-label="撮影">
-        <span class="shutter-inner"></span>
-      </button>
-    {/if}
+    <div class="controls-inner">
+      <button class="close" onclick={onclose}>閉じる</button>
+      {#if !errorMessage}
+        <button class="shutter" onclick={capture} disabled={!stream || capturing} aria-label="撮影">
+          <span class="shutter-inner"></span>
+        </button>
+      {/if}
+    </div>
   {/snippet}
 </CameraLayout>
 
@@ -129,6 +132,30 @@
     font-size: 1rem;
     line-height: 1.6;
     color: #ccc;
+  }
+
+  .controls-inner {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    width: 100%;
+    padding: 0 24px;
+  }
+
+  .close {
+    justify-self: start;
+    padding: 12px 24px;
+    border-radius: 28px;
+    border: 2px solid #fff;
+    background: transparent;
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .close:active {
+    background: rgba(255, 255, 255, 0.2);
   }
 
   .shutter {

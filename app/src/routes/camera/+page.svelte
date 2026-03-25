@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
+  import { resolve } from '$app/paths';
   import type { CameraMode, HistoryBackEventDetail } from '$lib/types';
   import CameraCapture from '$lib/components/camera/CameraCapture.svelte';
   import CameraResult from '$lib/components/camera/CameraResult.svelte';
@@ -39,7 +41,7 @@
 </script>
 
 {#if mode === 'capture'}
-  <CameraCapture oncapture={handleCapture} />
+  <CameraCapture oncapture={handleCapture} onclose={() => goto(resolve('/'))} />
 {:else}
   <CameraResult imageUrl={capturedImageUrl} onretake={handleRetake} />
 {/if}

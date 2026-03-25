@@ -26,7 +26,7 @@ describe('CameraCapture', () => {
     it('NotFoundErrorでカメラが見つからないメッセージを表示する', async () => {
       getUserMediaMock.mockRejectedValue(new DOMException('', 'NotFoundError'));
 
-      render(CameraCapture, { oncapture: vi.fn() });
+      render(CameraCapture, { oncapture: vi.fn(), onclose: vi.fn() });
 
       await expect
         .element(
@@ -38,7 +38,7 @@ describe('CameraCapture', () => {
     it('NotAllowedErrorで許可メッセージを表示する', async () => {
       getUserMediaMock.mockRejectedValue(new DOMException('', 'NotAllowedError'));
 
-      render(CameraCapture, { oncapture: vi.fn() });
+      render(CameraCapture, { oncapture: vi.fn(), onclose: vi.fn() });
 
       await expect
         .element(
@@ -52,7 +52,7 @@ describe('CameraCapture', () => {
     it('NotReadableErrorでアクセスエラーメッセージを表示する', async () => {
       getUserMediaMock.mockRejectedValue(new DOMException('', 'NotReadableError'));
 
-      render(CameraCapture, { oncapture: vi.fn() });
+      render(CameraCapture, { oncapture: vi.fn(), onclose: vi.fn() });
 
       await expect
         .element(
@@ -66,7 +66,7 @@ describe('CameraCapture', () => {
     it('予期しないエラーで汎用メッセージを表示する', async () => {
       getUserMediaMock.mockRejectedValue(new Error('unknown'));
 
-      render(CameraCapture, { oncapture: vi.fn() });
+      render(CameraCapture, { oncapture: vi.fn(), onclose: vi.fn() });
 
       await expect
         .element(page.getByText('カメラの起動中に予期しないエラーが発生しました。'))
@@ -76,7 +76,7 @@ describe('CameraCapture', () => {
     it('エラー時はシャッターボタンを表示しない', async () => {
       getUserMediaMock.mockRejectedValue(new DOMException('', 'NotFoundError'));
 
-      render(CameraCapture, { oncapture: vi.fn() });
+      render(CameraCapture, { oncapture: vi.fn(), onclose: vi.fn() });
 
       await expect
         .element(
@@ -91,7 +91,7 @@ describe('CameraCapture', () => {
     it('カメラ起動成功時にシャッターボタンが有効になる', async () => {
       getUserMediaMock.mockResolvedValue(createFakeMediaStream());
 
-      render(CameraCapture, { oncapture: vi.fn() });
+      render(CameraCapture, { oncapture: vi.fn(), onclose: vi.fn() });
 
       const shutter = page.getByRole('button', { name: '撮影' });
       await expect.element(shutter).toBeEnabled();
