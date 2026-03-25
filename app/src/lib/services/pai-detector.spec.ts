@@ -1,10 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-
-const mockLoadCv = vi.fn();
-
-vi.mock('./opencv-loader.js', () => ({
-  loadCv: mockLoadCv,
-}));
+import { detect, DetectionError } from './pai-detector.js';
 
 function createImageData(width: number, height: number): ImageData {
   return {
@@ -16,7 +11,7 @@ function createImageData(width: number, height: number): ImageData {
 }
 
 /** findContours が返す矩形を定義するヘルパー */
-function setupMockCv(rects: { x: number; y: number; width: number; height: number }[]) {
+function createMockCv(rects: { x: number; y: number; width: number; height: number }[]) {
   const deletedMats: { delete: ReturnType<typeof vi.fn> }[] = [];
 
   const mockContours = {
@@ -30,14 +25,8 @@ function setupMockCv(rects: { x: number; y: number; width: number; height: numbe
     cols: number;
     data: Uint8Array;
     delete = vi.fn();
-    roi = vi.fn(() => {
-      const m = new MockMat(this.rows, this.cols);
-      return m;
-    });
-    clone = vi.fn(() => {
-      const m = new MockMat(this.rows, this.cols);
-      return m;
-    });
+    roi = vi.fn(() => new MockMat(this.rows, this.cols));
+    clone = vi.fn(() => new MockMat(this.rows, this.cols));
     constructor(rows = 0, cols = 0) {
       this.rows = rows;
       this.cols = cols;
@@ -71,9 +60,8 @@ function setupMockCv(rects: { x: number; y: number; width: number; height: numbe
     CHAIN_APPROX_SIMPLE: 2,
   };
 
-  mockLoadCv.mockResolvedValue(mockCv);
-
-  return { mockCv, deletedMats, mockContours };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return { mockCv: mockCv as any, deletedMats, mockContours };
 }
 
 describe('pai-detector', () => {
@@ -81,24 +69,22 @@ describe('pai-detector', () => {
     vi.clearAllMocks();
   });
 
-  it('パイが検出されない場合、空の配列を返す', async () => {
-    setupMockCv([]);
-    const { detect } = await import('./pai-detector.js');
+  it('パイが検出されない場合、空の配列を返す', () => {
+    const { mockCv } = createMockCv([]);
 
-    const result = await detect(createImageData(640, 480));
+    const result = detect(mockCv, createImageData(640, 480));
 
     expect(result).toEqual([]);
   });
 
-  it('検出されたパイを左から右へソートして返す', async () => {
-    setupMockCv([
+  it('検出されたパイを左から右へソートして返す', () => {
+    const { mockCv } = createMockCv([
       { x: 300, y: 100, width: 50, height: 70 },
       { x: 100, y: 100, width: 50, height: 70 },
       { x: 200, y: 100, width: 50, height: 70 },
     ]);
-    const { detect } = await import('./pai-detector.js');
 
-    const result = await detect(createImageData(640, 480));
+    const result = detect(mockCv, createImageData(640, 480));
 
     expect(result).toHaveLength(3);
     expect(result[0].x).toBe(100);
@@ -106,62 +92,57 @@ describe('pai-detector', () => {
     expect(result[2].x).toBe(300);
   });
 
-  it('各検出領域がDetectedRegionの形状を持つ', async () => {
-    setupMockCv([{ x: 100, y: 50, width: 50, height: 70 }]);
-    const { detect } = await import('./pai-detector.js');
+  it('各検出領域がDetectedRegionの形状を持つ', () => {
+    const { mockCv } = createMockCv([{ x: 100, y: 50, width: 50, height: 70 }]);
 
-    const result = await detect(createImageData(640, 480));
+    const result = detect(mockCv, createImageData(640, 480));
 
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({ x: 100, y: 50, width: 50, height: 70 });
     expect(result[0].imageData).toBeDefined();
   });
 
-  it('アスペクト比が範囲外の矩形をフィルタリングする', async () => {
-    setupMockCv([
+  it('アスペクト比が範囲外の矩形をフィルタリングする', () => {
+    const { mockCv } = createMockCv([
       { x: 100, y: 100, width: 50, height: 70 }, // w/h=0.71 → OK
-      { x: 200, y: 100, width: 200, height: 20 }, // w/h=10.0 → NG（横長すぎ）
-      { x: 300, y: 100, width: 5, height: 100 }, // w/h=0.05 → NG（縦長すぎ）
+      { x: 200, y: 100, width: 200, height: 20 }, // w/h=10.0 → NG
+      { x: 300, y: 100, width: 5, height: 100 }, // w/h=0.05 → NG
     ]);
-    const { detect } = await import('./pai-detector.js');
 
-    const result = await detect(createImageData(640, 480));
+    const result = detect(mockCv, createImageData(640, 480));
 
     expect(result).toHaveLength(1);
     expect(result[0].x).toBe(100);
   });
 
-  it('面積が極端に小さい矩形をフィルタリングする', async () => {
-    setupMockCv([
-      { x: 100, y: 100, width: 50, height: 70 }, // 3500 → OK
-      { x: 200, y: 100, width: 3, height: 3 }, // 9 → NG
+  it('面積が極端に小さい矩形をフィルタリングする', () => {
+    const { mockCv } = createMockCv([
+      { x: 100, y: 100, width: 50, height: 70 },
+      { x: 200, y: 100, width: 3, height: 3 },
     ]);
-    const { detect } = await import('./pai-detector.js');
 
-    const result = await detect(createImageData(640, 480));
+    const result = detect(mockCv, createImageData(640, 480));
 
     expect(result).toHaveLength(1);
     expect(result[0].x).toBe(100);
   });
 
-  it('面積が極端に大きい矩形をフィルタリングする', async () => {
-    setupMockCv([
-      { x: 100, y: 100, width: 50, height: 70 }, // OK
-      { x: 0, y: 0, width: 600, height: 400 }, // NG（画像全体に近い）
+  it('面積が極端に大きい矩形をフィルタリングする', () => {
+    const { mockCv } = createMockCv([
+      { x: 100, y: 100, width: 50, height: 70 },
+      { x: 0, y: 0, width: 600, height: 400 },
     ]);
-    const { detect } = await import('./pai-detector.js');
 
-    const result = await detect(createImageData(640, 480));
+    const result = detect(mockCv, createImageData(640, 480));
 
     expect(result).toHaveLength(1);
     expect(result[0].x).toBe(100);
   });
 
-  it('Matオブジェクトが成功時に解放される', async () => {
-    const { deletedMats, mockContours } = setupMockCv([]);
-    const { detect } = await import('./pai-detector.js');
+  it('Matオブジェクトが成功時に解放される', () => {
+    const { mockCv, deletedMats, mockContours } = createMockCv([]);
 
-    await detect(createImageData(640, 480));
+    detect(mockCv, createImageData(640, 480));
 
     for (const mat of deletedMats) {
       expect(mat.delete).toHaveBeenCalled();
@@ -169,24 +150,16 @@ describe('pai-detector', () => {
     expect(mockContours.delete).toHaveBeenCalled();
   });
 
-  it('Matオブジェクトがエラー時にも解放される', async () => {
-    const { mockCv, deletedMats } = setupMockCv([]);
+  it('Matオブジェクトがエラー時にも解放される', () => {
+    const { mockCv, deletedMats } = createMockCv([]);
     mockCv.cvtColor.mockImplementation(() => {
       throw new Error('OpenCV internal error');
     });
-    const { detect, DetectionError } = await import('./pai-detector.js');
 
-    await expect(detect(createImageData(640, 480))).rejects.toBeInstanceOf(DetectionError);
+    expect(() => detect(mockCv, createImageData(640, 480))).toThrow(DetectionError);
 
     for (const mat of deletedMats) {
       expect(mat.delete).toHaveBeenCalled();
     }
-  });
-
-  it('OpenCV.jsのロードに失敗した場合エラーになる', async () => {
-    mockLoadCv.mockRejectedValue(new Error('WASM load failed'));
-    const { detect } = await import('./pai-detector.js');
-
-    await expect(detect(createImageData(640, 480))).rejects.toThrow('WASM load failed');
   });
 });

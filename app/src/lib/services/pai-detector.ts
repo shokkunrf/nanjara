@@ -1,7 +1,7 @@
 /** 撮影画像からパイ領域を検出するサービス */
 
+import type { CV } from '@techstark/opencv-js';
 import type { DetectedRegion } from '../types.js';
-import { loadCv } from './opencv-loader.js';
 
 export class DetectionError extends Error {
   override readonly name = 'DetectionError';
@@ -16,13 +16,12 @@ const MAX_AREA_RATIO = 0.15;
 /**
  * 撮影画像からパイ領域を検出する。
  *
+ * @param cv - OpenCV.js の cv オブジェクト
  * @param imageData - 撮影画像のRGBAピクセルデータ
  * @returns 検出されたパイ領域の配列（左→右の順）
- * @throws {DetectionError} OpenCV.jsが利用不可、または処理中のエラー
+ * @throws {DetectionError} 処理中のエラー
  */
-export async function detect(imageData: ImageData): Promise<DetectedRegion[]> {
-  const cv = await loadCv();
-
+export function detect(cv: CV, imageData: ImageData): DetectedRegion[] {
   const mats: { delete(): void }[] = [];
 
   try {
