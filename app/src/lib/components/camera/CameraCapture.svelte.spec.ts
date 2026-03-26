@@ -15,7 +15,10 @@ let getUserMediaMock: ReturnType<typeof vi.fn>;
 beforeEach(() => {
   getUserMediaMock = vi.fn();
   Object.defineProperty(navigator, 'mediaDevices', {
-    value: { getUserMedia: getUserMediaMock },
+    value: {
+      getUserMedia: getUserMediaMock,
+      enumerateDevices: vi.fn().mockResolvedValue([]),
+    },
     writable: true,
     configurable: true,
   });
