@@ -101,7 +101,7 @@ TASK-0007 → TASK-0008
 - [x] [TASK-0010: ルーティング移行・topページ実装](TASK-0010.md) - TDD 🔵
 - [x] [TASK-0011: CameraResult拡張（認識パイプライン統合）](TASK-0011.md) - TDD 🔵
 - [x] [TASK-0012: 認識結果画面実装](TASK-0012.md) - TDD 🔵
-- [ ] [TASK-0013: 加点役・ジャラ表示統合](TASK-0013.md) - TDD 🔵
+- [x] [TASK-0013: 加点役・ジャラ表示統合](TASK-0013.md) - TDD 🔵
 - [ ] [TASK-0014: ルール一覧画面実装](TASK-0014.md) - TDD 🔵
 
 ### 依存関係

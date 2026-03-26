@@ -3,18 +3,22 @@
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
-  import type { RecognitionResult, PaiDetailMap } from '$lib/types';
+  import type { RecognitionResult, PaiDetailMap, ScoringResult } from '$lib/types';
+  import { score } from '$lib/services/scoring-engine.js';
 
   let result: RecognitionResult | undefined = $derived(
     (page.state as { result?: RecognitionResult }).result,
   );
 
   let paiDetails: PaiDetailMap = $state({});
+  let scoringResult: ScoringResult | null = $state(null);
 
-  onMount(() => {
-    fetch('/pai-details.json')
-      .then((r) => r.json())
-      .then((data) => (paiDetails = data));
+  onMount(async () => {
+    paiDetails = await fetch('/pai-details.json').then((r) => r.json());
+
+    if (result) {
+      scoringResult = await score(result.pais.map((p) => p.paiId));
+    }
   });
 
   function getName(paiId: string): string {
@@ -23,6 +27,10 @@
 
   function formatConfidence(confidence: number): string {
     return `${Math.round(confidence * 100)}%`;
+  }
+
+  function formatJara(jara: number): string {
+    return jara.toLocaleString();
   }
 </script>
 
@@ -42,6 +50,28 @@
         </li>
       {/each}
     </ul>
+
+    {#if scoringResult}
+      <section class="scoring">
+        <h2>合計 {formatJara(scoringResult.totalJara)} ジャラ</h2>
+
+        {#if scoringResult.matchedRules.length > 0}
+          <ul class="rule-list">
+            {#each scoringResult.matchedRules as matched, i (i)}
+              <li class="rule-item">
+                <span class="rule-name">{matched.rule.name}</span>
+                <span class="rule-detail"
+                  >{matched.matchedCount}枚 / {matched.rule.requiredCount}枚</span
+                >
+                <span class="rule-jara">+{formatJara(matched.rule.jara)}</span>
+              </li>
+            {/each}
+          </ul>
+        {:else}
+          <p class="no-rules">加点役なし</p>
+        {/if}
+      </section>
+    {/if}
 
     <div class="actions">
       <button class="btn" onclick={() => goto(resolve('/camera'))}>再撮影</button>
@@ -127,8 +157,68 @@
     color: #888;
   }
 
+  .scoring {
+    width: 100%;
+    max-width: 400px;
+    margin-top: 24px;
+  }
+
+  h2 {
+    font-size: 24px;
+    text-align: center;
+    margin: 0 0 12px;
+    color: #e91e63;
+  }
+
+  .rule-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .rule-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+
+  .rule-name {
+    font-size: 14px;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .rule-detail {
+    font-size: 12px;
+    color: #888;
+    white-space: nowrap;
+  }
+
+  .rule-jara {
+    font-size: 14px;
+    color: #e91e63;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .no-rules {
+    text-align: center;
+    color: #888;
+    font-size: 14px;
+  }
+
   .actions {
     margin-top: 24px;
+    padding-bottom: 24px;
   }
 
   .btn {
