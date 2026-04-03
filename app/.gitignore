@@ -16,6 +16,7 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+!.env.template
 !.env.test
 
 # Vite
@@ -27,3 +28,6 @@ static/pai-images
 
 # Playwright
 test-results
+
+# E2Eテスト画像（入力・出力とも手動配置）
+static/e2e

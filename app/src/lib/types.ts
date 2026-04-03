@@ -52,31 +52,6 @@ export type PaiDetailMap = Record<PaiId, PaiDetail>;
 // 画像認識（パイプライン内部）
 // ========================================
 
-/**
- * パイ検出結果（画像内の1パイの領域 + 切り出し画像）
- *
- * パイプライン内部で使用。検出後のpHash計算に imageData が必要。
- * 認識完了後は RecognizedPai に変換され、imageData は破棄される。
- */
-export interface DetectedRegion {
-  /** バウンディングボックス左上X座標 */
-  x: number;
-  /** バウンディングボックス左上Y座標 */
-  y: number;
-  /** 幅 */
-  width: number;
-  /** 高さ */
-  height: number;
-  /** 切り出した画像データ（pHash計算用、認識完了後は破棄） */
-  imageData: ImageData;
-}
-
-/**
- * pHashデータ（事前処理結果）
- * pai-hashes.json の構造: { "001_livelive_muse.png": "3e4f64cea0608dbc", ... }
- */
-export type PaiHashMap = Record<PaiId, string>;
-
 // ========================================
 // 認識結果（/result ルートに渡すデータ）
 // ========================================

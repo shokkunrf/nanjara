@@ -2,14 +2,10 @@
   import { onMount } from 'svelte';
   import type { HistoryBackEventDetail } from '$lib/types';
   import favicon from '$lib/assets/favicon.svg';
-  import { preload } from '$lib/services/recognition-service.js';
-
   let { children } = $props();
   let showToast = $state(false);
 
   onMount(() => {
-    preload();
-
     // ガードエントリを積む（ユーザーがページを操作済みなら有効）
     history.pushState({ label: 'guard' }, '');
 
