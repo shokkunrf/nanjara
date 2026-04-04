@@ -1,7 +1,8 @@
 /**
  * Gemini 3.1 Flash Lite による麻雀パイ認識サービス
  *
- * 撮影写真を送信し、写真内のパイIDをJSON配列で取得する。
+ * 4枚のカタログ画像（参照パイ84種）と撮影写真を送信し、
+ * 写真内のパイIDをJSON配列で取得する。
  */
 
 import { PUBLIC_GEMINI_API_KEY, PUBLIC_GEMINI_MODEL } from '$env/static/public';
@@ -12,15 +13,39 @@ export class GeminiRecognitionError extends Error {
 }
 
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${PUBLIC_GEMINI_MODEL}:generateContent`;
+const CATALOG_COUNT = 4;
 
-/** カタログキャッシュ */
-let catalogCache: { idList: string; images: { number: string; base64: string }[] } | null = null;
+/** カタログ画像のBase64キャッシュ */
+let catalogCache: string[] | null = null;
+
+/** 番号→ID対応テキスト（プロンプト用） */
+let idListCache: string | null = null;
 
 /** 3桁番号→PaiId の対応マップ */
 let numberToIdMap: Map<string, PaiId> | null = null;
 
-async function loadCatalog(): Promise<{ idList: string; images: { number: string; base64: string }[] }> {
+async function loadCatalogs(): Promise<string[]> {
   if (catalogCache) return catalogCache;
+
+  const catalogs: string[] = [];
+  for (let i = 1; i <= CATALOG_COUNT; i++) {
+    const response = await fetch(`/catalog-images/pai-catalog-${i}.png`);
+    if (!response.ok) {
+      throw new GeminiRecognitionError(
+        `Failed to load catalog-images/pai-catalog-${i}.png: ${response.status}`,
+      );
+    }
+    const blob = await response.blob();
+    const base64 = await blobToBase64(blob);
+    catalogs.push(base64);
+  }
+
+  catalogCache = catalogs;
+  return catalogs;
+}
+
+async function loadIdList(): Promise<string> {
+  if (idListCache) return idListCache;
 
   const response = await fetch('/pai-details.json');
   if (!response.ok) {
@@ -35,20 +60,8 @@ async function loadCatalog(): Promise<{ idList: string; images: { number: string
     numberToIdMap.set(id.substring(0, 3), id as PaiId);
   }
 
-  const idList = ids.map((id) => `${id.substring(0, 3)}: ${id}`).join('\n');
-
-  // 84枚のカタログ画像を並列で取得しBase64化
-  const images = await Promise.all(
-    ids.map(async (id) => {
-      const res = await fetch(`/pai-images/${id}`);
-      const blob = await res.blob();
-      const base64 = await blobToBase64(blob);
-      return { number: id.substring(0, 3), base64 };
-    }),
-  );
-
-  catalogCache = { idList, images };
-  return catalogCache;
+  idListCache = ids.map((id) => `${id.substring(0, 3)}: ${id}`).join('\n');
+  return idListCache;
 }
 
 function blobToBase64(blob: Blob): Promise<string> {
@@ -90,15 +103,16 @@ async function preparePhoto(imageUrl: string): Promise<string[]> {
 }
 
 function buildPrompt(idList: string): string {
-  return `撮影写真に写っている麻雀パイを識別してください。
-参考画像として各パイのカタログ画像を番号順（001〜084）に添付しています。撮影写真は最後の画像です。
+  return `以下に4枚の参照カタログ画像を提示します。各カタログは7列×3行のグリッドに21種の麻雀パイが並び、各セル下に3桁番号があります。
+
+最後の1枚が撮影写真です。カタログの絵柄と視覚的に比較し識別してください。
 
 ## 識別のコツ
 - 各パイには特徴的な背景色があります（ピンク、青、オレンジ、黄色、緑、紫、赤など）
 - まず背景色で候補を絞り、次に髪型・髪色で確定させてください
+- 背景色が似ているパイが複数ある場合は、髪型（ストレート/ツインテール/ショート/ポニーテール/三つ編み等）やアクセサリー（リボン・髪飾り）で判別してください
 - ロゴ系のパイ（文字やエンブレム）は文字やデザインで判断してください
 - 影や反射で色が変わって見えることがあります。絵柄の形状を重視してください
-- カタログ画像と撮影写真を見比べて最も一致するパイを選んでください
 
 ## 番号→ID対応
 ${idList}
@@ -106,19 +120,20 @@ ${idList}
 ## ルール
 - 裏向き（ピンク無地）パイは無視
 - 横並びなら左→右、縦並びなら上→下の順
+- カタログの絵柄と写真のパイを見比べて最も似ているものを選ぶ
 - 同じ番号を2回以上使わないこと。各パイはユニークなので結果に重複があってはならない
 - 3桁番号のみのJSON配列を返す（例: ["003","008","015"]）`;
 }
 
 /** Gemini API に1回リクエストを送信してパイIDの配列を取得 */
 async function callGeminiOnce(
+  catalogs: string[],
   idList: string,
-  catalogImages: { number: string; base64: string }[],
   photos: string[],
 ): Promise<PaiId[]> {
   const parts: Record<string, unknown>[] = [
     { text: buildPrompt(idList) },
-    ...catalogImages.map((img) => ({ inline_data: { mime_type: 'image/png', data: img.base64 } })),
+    ...catalogs.map((c) => ({ inline_data: { mime_type: 'image/png', data: c } })),
     ...photos.map((p) => ({ inline_data: { mime_type: 'image/jpeg', data: p } })),
   ];
 
@@ -171,12 +186,13 @@ export async function recognizeWithGemini(imageUrl: string): Promise<Recognition
 
   const start = performance.now();
 
-  const [catalog, photos] = await Promise.all([
-    loadCatalog(),
+  const [catalogs, idList, photos] = await Promise.all([
+    loadCatalogs(),
+    loadIdList(),
     preparePhoto(imageUrl),
   ]);
 
-  const paiIds = await callGeminiOnce(catalog.idList, catalog.images, photos);
+  const paiIds = await callGeminiOnce(catalogs, idList, photos);
 
   const pais = paiIds.map((paiId) => ({
     paiId,
