@@ -99,11 +99,55 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
+/** 画像全体に一様な明度・コントラスト補正 */
+function uniformBrightness(imgData: ImageData, brightness: number, contrast: number): void {
+  const { data } = imgData;
+  const factor = contrast;
+  const offset = 128 * (1 - contrast) + (brightness - 1) * 255;
+  for (let i = 0; i < data.length; i += 4) {
+    data[i] = Math.min(255, Math.max(0, data[i] * factor + offset)) | 0;
+    data[i + 1] = Math.min(255, Math.max(0, data[i + 1] * factor + offset)) | 0;
+    data[i + 2] = Math.min(255, Math.max(0, data[i + 2] * factor + offset)) | 0;
+  }
+}
+
+/** 彩度をブーストする（HSL空間で彩度を乗算） */
+function boostSaturation(imgData: ImageData, factor: number): void {
+  const { data } = imgData;
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i] / 255, g = data[i + 1] / 255, b = data[i + 2] / 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    const l = (max + min) / 2;
+    if (max === min) continue; // 無彩色はスキップ
+    const d = max - min;
+    const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    let h = 0;
+    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+    else if (max === g) h = ((b - r) / d + 2) / 6;
+    else h = ((r - g) / d + 4) / 6;
+    // 彩度をブースト
+    const ns = Math.min(1, s * factor);
+    // HSL → RGB
+    const hue2rgb = (p: number, q: number, t: number) => {
+      if (t < 0) t += 1; if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + ns) : l + ns - l * ns;
+    const p = 2 * l - q;
+    data[i] = Math.min(255, Math.max(0, hue2rgb(p, q, h + 1/3) * 255 + 0.5)) | 0;
+    data[i + 1] = Math.min(255, Math.max(0, hue2rgb(p, q, h) * 255 + 0.5)) | 0;
+    data[i + 2] = Math.min(255, Math.max(0, hue2rgb(p, q, h - 1/3) * 255 + 0.5)) | 0;
+  }
+}
+
 /**
- * 撮影画像からパイのバンド領域を切り出し、Base64化する。
+ * 撮影画像からパイのバンド領域を切り出し、明るさ強化してBase64化する。
  * バンド検出に失敗した場合は全体画像をフォールバック。
  */
-async function preparePhoto(imageUrl: string): Promise<string[]> {
+async function preparePhoto(imageUrl: string): Promise<string> {
   const response = await fetch(imageUrl);
   const blob = await response.blob();
   const bitmap = await createImageBitmap(blob);
@@ -154,16 +198,24 @@ async function preparePhoto(imageUrl: string): Promise<string[]> {
   ctx.drawImage(srcBitmap, 0, 0, w, h);
   srcBitmap.close();
 
-  const jpegBlob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 });
-  const base64 = await blobToBase64(jpegBlob);
+  // バリエーション1: 無加工
+  const baseData = ctx.getImageData(0, 0, w, h);
+  const blob1 = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 });
 
-  return [base64];
+  // バリエーション2: 明度+コントラスト+彩度を一様に変更
+  const imgData2 = new ImageData(new Uint8ClampedArray(baseData.data), w, h);
+  uniformBrightness(imgData2, 1.15, 1.4);
+  boostSaturation(imgData2, 1.6);
+  ctx.putImageData(imgData2, 0, 0);
+  const blob2 = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 });
+
+  return Promise.all([blobToBase64(blob1), blobToBase64(blob2)]);
 }
 
 function buildPrompt(idList: string): string {
   return `以下に4枚の参照カタログ画像を提示します。各カタログは7列×3行のグリッドに21種の麻雀パイが並び、各セル下に3桁番号があります。
 
-最後の1枚が撮影写真です。カタログの絵柄と視覚的に比較し識別してください。
+最後の2枚が撮影写真です（同じ写真の色調違い）。両方を見比べてカタログの絵柄と視覚的に比較し識別してください。
 
 ## 識別のコツ
 - 各パイには特徴的な背景色があります（ピンク、青、オレンジ、黄色、緑、紫、赤など）
