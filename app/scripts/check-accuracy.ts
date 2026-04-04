@@ -4,9 +4,11 @@
  * Playwright でアプリの実フローを通し、認識精度と処理時間を集計する。
  *
  * 使い方:
- *   npm run check-accuracy
+ *   npm run bench
  */
 import { chromium } from 'playwright';
+import fs from 'node:fs';
+import path from 'node:path';
 
 interface TestCase {
   image: string;
@@ -145,6 +147,9 @@ async function run() {
   const browser = await chromium.launch();
   const context = await browser.newContext({ ignoreHTTPSErrors: true });
 
+  const outputDir = path.resolve(new URL('.', import.meta.url).pathname, '..', 'static', 'e2e', 'output');
+  fs.mkdirSync(outputDir, { recursive: true });
+
   let totalCorrect = 0;
   let totalExpected = 0;
   const times: number[] = [];
@@ -152,6 +157,25 @@ async function run() {
   for (const tc of TEST_CASES) {
     const page = await context.newPage();
     const imageUrl = `/e2e/input/${tc.image}`;
+
+    // Gemini APIリクエストをインターセプトして送信画像を保存
+    let geminiPhotoBase64: string | undefined;
+    page.on('request', (req) => {
+      if (req.url().includes('generativelanguage.googleapis.com')) {
+        try {
+          const body = JSON.parse(req.postData() ?? '{}');
+          const parts: { inline_data?: { mime_type: string; data: string } }[] =
+            body.contents?.[0]?.parts ?? [];
+          // 最後のJPEG画像が撮影写真
+          const jpegs = parts.filter((p) => p.inline_data?.mime_type === 'image/jpeg');
+          if (jpegs.length > 0) {
+            geminiPhotoBase64 = jpegs[jpegs.length - 1].inline_data!.data;
+          }
+        } catch {
+          // リクエストボディのパースに失敗した場合は無視
+        }
+      }
+    });
 
     // カメラモック: 撮影時にテスト画像を注入
     await page.addInitScript((imgUrl: string) => {
@@ -215,6 +239,13 @@ async function run() {
       console.log(`${tc.image}: エラー（スキップ）`);
       await page.close();
       continue;
+    }
+
+    // Geminiに送信した画像を保存
+    if (geminiPhotoBase64) {
+      const baseName = tc.image.replace(/\.[^.]+$/, '');
+      const outPath = path.join(outputDir, `${baseName}_gemini.jpg`);
+      fs.writeFileSync(outPath, Buffer.from(geminiPhotoBase64, 'base64'));
     }
 
     // 処理時間
