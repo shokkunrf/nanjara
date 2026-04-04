@@ -4,9 +4,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { createRequire } from 'node:module';
-const require = createRequire(path.resolve('hasher') + '/x');
-const sharp = require('sharp');
+import sharp from 'sharp';
 
 const PAI_IMAGES_DIR = process.argv[2];
 const OUTPUT_DIR = process.argv[3];
