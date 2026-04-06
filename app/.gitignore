@@ -25,7 +25,8 @@ vite.config.ts.timestamp-*
 
 # パイ画像(extractorで生成)
 static/pai-images
-static/catalog-images
+src/lib/server/assets/*
+!src/lib/server/assets/.gitkeep
 
 # Playwright
 test-results
