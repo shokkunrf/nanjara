@@ -6,7 +6,7 @@
 
 ```sh
 npm install
-npm start -- input/_page2.png ../../app/static/pai-images/
+npm start -- ../../docs/official/manual_page2.png ../../app/static/pai-images/
 ```
 
 ## 入力

@@ -1,4 +1,4 @@
-# extractor
+# catalog-generator
 
 切り出したパイ画像からGeminiに送信する用のカタログ画像を合成するツール。
 
@@ -15,7 +15,7 @@ npm start -- <PAI_IMAGES_DIR> <OUTPUT_DIR>
 例:
 
 ```sh
-npm start -- ../../app/static/pai-images ../../app/static
+npm start -- ../extractor/output/ ../../app/src/lib/server/assets/
 ```
 
 ## 出力
