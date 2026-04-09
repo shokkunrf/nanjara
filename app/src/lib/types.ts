@@ -44,14 +44,12 @@ export type PaiDetailMap = Record<PaiId, PaiDetail>;
 /**
  * パイ識別結果（1枚分）
  *
- * /result ルートに渡すデータ。表示に必要なのは paiId（参照画像・名前の取得）と confidence のみ。
+ * /result ルートに渡すデータ。表示に必要なのは paiId（参照画像・名前の取得）のみ。
  * 撮影画像上の座標（region）は結果表示に不要なため持たない。
  */
 export interface RecognizedPai {
   /** 識別されたパイID */
   paiId: PaiId;
-  /** 類似度スコア（ハミング距離の逆数等、0-1） */
-  confidence: number;
 }
 
 /**

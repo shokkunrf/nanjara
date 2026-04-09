@@ -32,10 +32,6 @@
     return paiDetails[paiId]?.name ?? paiId;
   }
 
-  function formatConfidence(confidence: number): string {
-    return `${Math.round(confidence * 100)}%`;
-  }
-
   function formatJara(jara: number): string {
     return jara.toLocaleString();
   }
@@ -52,7 +48,6 @@
           <img src={`/pai-images/${pai.paiId}`} alt={getName(pai.paiId)} />
           <div class="pai-info">
             <span class="pai-name">{getName(pai.paiId)}</span>
-            <span class="pai-confidence">{formatConfidence(pai.confidence)}</span>
           </div>
         </li>
       {/each}
@@ -157,11 +152,6 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-
-  .pai-confidence {
-    font-size: 11px;
-    color: #888;
   }
 
   .scoring {

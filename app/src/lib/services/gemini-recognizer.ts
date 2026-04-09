@@ -118,10 +118,7 @@ export async function recognizeWithGemini(imageUrl: string): Promise<Recognition
 
   const { paiIds } = (await response.json()) as { paiIds: PaiId[] };
 
-  const pais = paiIds.map((paiId) => ({
-    paiId,
-    confidence: 1.0,
-  }));
+  const pais = paiIds.map((paiId) => ({ paiId }));
 
   return {
     pais,
