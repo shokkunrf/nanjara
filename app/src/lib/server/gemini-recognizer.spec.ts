@@ -121,6 +121,20 @@ describe('gemini-recognizer', () => {
     await expect(recognizePais(['photo'])).rejects.toThrow('No text in Gemini response');
   });
 
+  it('Gemini APIがstring[]以外のJSONを返した場合エラーをスローする', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          candidates: [{ content: { parts: [{ text: '{"result": ["003"]}' }] } }],
+        }),
+    });
+
+    const { recognizePais } = await import('./gemini-recognizer.js');
+
+    await expect(recognizePais(['photo'])).rejects.toThrow('Unexpected Gemini response format');
+  });
+
   it('thinkingパートを除外してテキストを取得する', async () => {
     mockFetch.mockResolvedValue({
       ok: true,

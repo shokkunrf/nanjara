@@ -102,12 +102,20 @@ export async function recognizePais(photos: string[]): Promise<string[]> {
     throw new Error('No text in Gemini response');
   }
 
-  let numbers: string[];
+  let parsed: unknown;
   try {
-    numbers = JSON.parse(text);
+    parsed = JSON.parse(text);
   } catch {
     throw new Error(`Invalid JSON from Gemini: ${text.slice(0, 200)}`);
   }
+
+  if (!Array.isArray(parsed) || !parsed.every((item) => typeof item === 'string')) {
+    throw new Error(
+      `Unexpected Gemini response format: expected string[], got: ${text.slice(0, 200)}`,
+    );
+  }
+
+  const numbers: string[] = parsed;
 
   return numbers
     .map((n) => {
