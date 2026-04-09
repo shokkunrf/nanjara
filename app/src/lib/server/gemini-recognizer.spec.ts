@@ -55,7 +55,7 @@ mockSharp.mockImplementation(() => {
 
 vi.mock('sharp', () => ({ default: mockSharp }));
 
-const testPhoto = [Buffer.from('test-jpeg-data').toString('base64')];
+const testPhoto = Buffer.from('test-jpeg-data');
 
 function geminiResponse(numbers: string[]) {
   return {

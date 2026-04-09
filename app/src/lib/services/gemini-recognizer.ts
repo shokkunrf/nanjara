@@ -33,24 +33,11 @@ function runExtractBand(
   });
 }
 
-function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      // data:image/png;base64,... → base64部分のみ
-      resolve(result.split(',')[1]);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
-
 /**
- * 撮影画像からパイのバンド領域を切り出してBase64化する。
+ * 撮影画像からパイのバンド領域を切り出してJPEG Blobにする。
  * バンド検出に失敗した場合は全体画像をフォールバック。
  */
-async function preparePhoto(imageUrl: string): Promise<string[]> {
+async function preparePhoto(imageUrl: string): Promise<Blob> {
   const response = await fetch(imageUrl);
   const blob = await response.blob();
   const bitmap = await createImageBitmap(blob);
@@ -101,8 +88,7 @@ async function preparePhoto(imageUrl: string): Promise<string[]> {
   ctx.drawImage(srcBitmap, 0, 0, w, h);
   srcBitmap.close();
 
-  const jpegBlob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 });
-  return [await blobToBase64(jpegBlob)];
+  return canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 });
 }
 
 /**
@@ -115,12 +101,14 @@ async function preparePhoto(imageUrl: string): Promise<string[]> {
 export async function recognizeWithGemini(imageUrl: string): Promise<RecognitionResult> {
   const start = performance.now();
 
-  const photos = await preparePhoto(imageUrl);
+  const photoBlob = await preparePhoto(imageUrl);
+
+  const formData = new FormData();
+  formData.append('photo', photoBlob);
 
   const response = await fetch('/api/recognize', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ photos }),
+    body: formData,
   });
 
   if (!response.ok) {

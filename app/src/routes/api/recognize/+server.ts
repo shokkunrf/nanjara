@@ -3,13 +3,15 @@ import type { RequestHandler } from './$types';
 import { recognizePais } from '$lib/server/gemini-recognizer.js';
 
 export const POST: RequestHandler = async ({ request }) => {
-  const { photos } = (await request.json()) as { photos: string[] };
-  if (!photos || !Array.isArray(photos) || photos.length === 0) {
-    error(400, 'photos array is required');
+  const formData = await request.formData();
+  const photo = formData.get('photo');
+  if (!photo || !(photo instanceof File)) {
+    error(400, 'photo file is required');
   }
 
   try {
-    const paiIds = await recognizePais(photos);
+    const buffer = Buffer.from(await photo.arrayBuffer());
+    const paiIds = await recognizePais(buffer);
     return json({ paiIds });
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Unknown error';

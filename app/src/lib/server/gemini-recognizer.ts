@@ -121,15 +121,14 @@ async function preparePhotos(photoBuffer: Buffer): Promise<string[]> {
  * 撮影写真からパイを識別する。
  * カタログ画像と写真をGemini APIに送信し、識別されたパイIDの配列を返す。
  *
- * @param photos - Base64エンコードされた撮影写真の配列（先頭1枚を使用）
+ * @param photoBuffer - 撮影写真のJPEGバッファ
  * @returns パイIDの配列
  */
-export async function recognizePais(photos: string[]): Promise<string[]> {
+export async function recognizePais(photoBuffer: Buffer): Promise<string[]> {
   if (!GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY is not configured');
   }
 
-  const photoBuffer = Buffer.from(photos[0], 'base64');
   const [catalogs, preparedPhotos] = await Promise.all([
     loadCatalogs(),
     preparePhotos(photoBuffer),
