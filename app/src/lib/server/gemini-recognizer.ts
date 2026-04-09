@@ -1,5 +1,6 @@
 import { read } from '$app/server';
 import { GEMINI_API_KEY, GEMINI_MODEL } from '$env/static/private';
+import sharp from 'sharp';
 import catalog1 from '$lib/server/assets/pai-catalog-1.png';
 import catalog2 from '$lib/server/assets/pai-catalog-2.png';
 import catalog3 from '$lib/server/assets/pai-catalog-3.png';
@@ -49,11 +50,78 @@ ${idList}
 - 3桁番号のみのJSON配列を返す（例: ["003","008","015"])`;
 }
 
+/** 画像全体に一様な明度・コントラスト補正 */
+function uniformBrightness(data: Uint8ClampedArray, brightness: number, contrast: number): void {
+  const factor = contrast;
+  const offset = 128 * (1 - contrast) + (brightness - 1) * 255;
+  for (let i = 0; i < data.length; i += 4) {
+    data[i] = Math.min(255, Math.max(0, data[i] * factor + offset)) | 0;
+    data[i + 1] = Math.min(255, Math.max(0, data[i + 1] * factor + offset)) | 0;
+    data[i + 2] = Math.min(255, Math.max(0, data[i + 2] * factor + offset)) | 0;
+  }
+}
+
+/** 彩度をブーストする（HSL空間で彩度を乗算） */
+function boostSaturation(data: Uint8ClampedArray, factor: number): void {
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i] / 255,
+      g = data[i + 1] / 255,
+      b = data[i + 2] / 255;
+    const max = Math.max(r, g, b),
+      min = Math.min(r, g, b);
+    const l = (max + min) / 2;
+    if (max === min) continue;
+    const d = max - min;
+    const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    let h = 0;
+    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+    else if (max === g) h = ((b - r) / d + 2) / 6;
+    else h = ((r - g) / d + 4) / 6;
+    const ns = Math.min(1, s * factor);
+    const hue2rgb = (p: number, q: number, t: number) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+      return p;
+    };
+    const q2 = l < 0.5 ? l * (1 + ns) : l + ns - l * ns;
+    const p2 = 2 * l - q2;
+    data[i] = Math.min(255, Math.max(0, hue2rgb(p2, q2, h + 1 / 3) * 255 + 0.5)) | 0;
+    data[i + 1] = Math.min(255, Math.max(0, hue2rgb(p2, q2, h) * 255 + 0.5)) | 0;
+    data[i + 2] = Math.min(255, Math.max(0, hue2rgb(p2, q2, h - 1 / 3) * 255 + 0.5)) | 0;
+  }
+}
+
+/**
+ * 1枚の写真バッファから無加工版と色調補正版の2枚のBase64を生成する。
+ */
+async function preparePhotos(photoBuffer: Buffer): Promise<string[]> {
+  const base64Original = photoBuffer.toString('base64');
+
+  const { data, info } = await sharp(photoBuffer)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const pixels = new Uint8ClampedArray(data.buffer, data.byteOffset, data.byteLength);
+  uniformBrightness(pixels, 1.15, 1.4);
+  boostSaturation(pixels, 1.6);
+
+  const correctedBuffer = await sharp(Buffer.from(pixels.buffer), {
+    raw: { width: info.width, height: info.height, channels: 4 },
+  })
+    .jpeg({ quality: 85 })
+    .toBuffer();
+
+  return [base64Original, correctedBuffer.toString('base64')];
+}
+
 /**
  * 撮影写真からパイを識別する。
  * カタログ画像と写真をGemini APIに送信し、識別されたパイIDの配列を返す。
  *
- * @param photos - Base64エンコードされた撮影写真の配列
+ * @param photos - Base64エンコードされた撮影写真の配列（先頭1枚を使用）
  * @returns パイIDの配列
  */
 export async function recognizePais(photos: string[]): Promise<string[]> {
@@ -61,7 +129,11 @@ export async function recognizePais(photos: string[]): Promise<string[]> {
     throw new Error('GEMINI_API_KEY is not configured');
   }
 
-  const catalogs = await loadCatalogs();
+  const photoBuffer = Buffer.from(photos[0], 'base64');
+  const [catalogs, preparedPhotos] = await Promise.all([
+    loadCatalogs(),
+    preparePhotos(photoBuffer),
+  ]);
 
   const details: Record<string, { name: string }> = paiDetailsJson;
   const ids = Object.keys(details).sort();
@@ -73,7 +145,7 @@ export async function recognizePais(photos: string[]): Promise<string[]> {
   const parts: Record<string, unknown>[] = [
     { text: buildPrompt(numberToIdMap) },
     ...catalogs.map((c) => ({ inline_data: { mime_type: 'image/png', data: c } })),
-    ...photos.map((p) => ({ inline_data: { mime_type: 'image/jpeg', data: p } })),
+    ...preparedPhotos.map((p) => ({ inline_data: { mime_type: 'image/jpeg', data: p } })),
   ];
 
   const body = {

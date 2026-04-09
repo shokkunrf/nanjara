@@ -17,6 +17,46 @@ vi.mock('$lib/server/assets/pai-catalog-2.png', () => ({ default: 'cat2' }));
 vi.mock('$lib/server/assets/pai-catalog-3.png', () => ({ default: 'cat3' }));
 vi.mock('$lib/server/assets/pai-catalog-4.png', () => ({ default: 'cat4' }));
 
+// sharpモック: ensureAlpha().raw().toBuffer() で RGBAピクセルデータを返す
+const mockSharpInstance = {
+  ensureAlpha: vi.fn().mockReturnThis(),
+  raw: vi.fn().mockReturnThis(),
+  toBuffer: vi.fn().mockResolvedValue({
+    data: Buffer.alloc(16), // 2x2 RGBA
+    info: { width: 2, height: 2, channels: 4 },
+  }),
+  jpeg: vi.fn().mockReturnThis(),
+};
+
+// sharp(buffer, options) でも同じインスタンスを返す
+const mockSharp = vi.fn().mockReturnValue({
+  ...mockSharpInstance,
+  jpeg: vi.fn().mockReturnValue({
+    toBuffer: vi.fn().mockResolvedValue(Buffer.from('corrected-jpeg')),
+  }),
+});
+// 最初のsharp(photoBuffer)呼出用
+mockSharp.mockImplementation(() => {
+  const instance = {
+    ensureAlpha: vi.fn().mockReturnValue({
+      raw: vi.fn().mockReturnValue({
+        toBuffer: vi.fn().mockResolvedValue({
+          data: Buffer.alloc(16),
+          info: { width: 2, height: 2, channels: 4 },
+        }),
+      }),
+    }),
+    jpeg: vi.fn().mockReturnValue({
+      toBuffer: vi.fn().mockResolvedValue(Buffer.from('corrected-jpeg')),
+    }),
+  };
+  return instance;
+});
+
+vi.mock('sharp', () => ({ default: mockSharp }));
+
+const testPhoto = [Buffer.from('test-jpeg-data').toString('base64')];
+
 function geminiResponse(numbers: string[]) {
   return {
     ok: true,
@@ -37,7 +77,7 @@ describe('gemini-recognizer', () => {
     mockFetch.mockResolvedValue(geminiResponse(['003', '008']));
 
     const { recognizePais } = await import('./gemini-recognizer.js');
-    const result = await recognizePais(['base64photo']);
+    const result = await recognizePais(testPhoto);
 
     expect(result).toEqual(['003_livelive_honoka.png', '008_livelive_maki.png']);
   });
@@ -46,7 +86,7 @@ describe('gemini-recognizer', () => {
     mockFetch.mockResolvedValue(geminiResponse(['003']));
 
     const { recognizePais } = await import('./gemini-recognizer.js');
-    await recognizePais(['photo1', 'photo2']);
+    await recognizePais(testPhoto);
 
     expect(mockFetch).toHaveBeenCalledOnce();
     const [url, options] = mockFetch.mock.calls[0];
@@ -67,7 +107,7 @@ describe('gemini-recognizer', () => {
     mockFetch.mockResolvedValue(geminiResponse(['3', '8']));
 
     const { recognizePais } = await import('./gemini-recognizer.js');
-    const result = await recognizePais(['base64photo']);
+    const result = await recognizePais(testPhoto);
 
     expect(result).toEqual(['003_livelive_honoka.png', '008_livelive_maki.png']);
   });
@@ -76,7 +116,7 @@ describe('gemini-recognizer', () => {
     mockFetch.mockResolvedValue(geminiResponse(['003', '999']));
 
     const { recognizePais } = await import('./gemini-recognizer.js');
-    const result = await recognizePais(['base64photo']);
+    const result = await recognizePais(testPhoto);
 
     expect(result).toEqual(['003_livelive_honoka.png']);
   });
@@ -90,7 +130,7 @@ describe('gemini-recognizer', () => {
 
     const { recognizePais } = await import('./gemini-recognizer.js');
 
-    await expect(recognizePais(['photo'])).rejects.toThrow('Gemini API error 500');
+    await expect(recognizePais(testPhoto)).rejects.toThrow('Gemini API error 500');
   });
 
   it('Gemini APIが不正なJSONを返した場合エラーをスローする', async () => {
@@ -104,7 +144,7 @@ describe('gemini-recognizer', () => {
 
     const { recognizePais } = await import('./gemini-recognizer.js');
 
-    await expect(recognizePais(['photo'])).rejects.toThrow('Invalid JSON from Gemini');
+    await expect(recognizePais(testPhoto)).rejects.toThrow('Invalid JSON from Gemini');
   });
 
   it('Gemini APIレスポンスにテキストがない場合エラーをスローする', async () => {
@@ -118,7 +158,7 @@ describe('gemini-recognizer', () => {
 
     const { recognizePais } = await import('./gemini-recognizer.js');
 
-    await expect(recognizePais(['photo'])).rejects.toThrow('No text in Gemini response');
+    await expect(recognizePais(testPhoto)).rejects.toThrow('No text in Gemini response');
   });
 
   it('Gemini APIがstring[]以外のJSONを返した場合エラーをスローする', async () => {
@@ -132,7 +172,7 @@ describe('gemini-recognizer', () => {
 
     const { recognizePais } = await import('./gemini-recognizer.js');
 
-    await expect(recognizePais(['photo'])).rejects.toThrow('Unexpected Gemini response format');
+    await expect(recognizePais(testPhoto)).rejects.toThrow('Unexpected Gemini response format');
   });
 
   it('thinkingパートを除外してテキストを取得する', async () => {
@@ -151,7 +191,7 @@ describe('gemini-recognizer', () => {
     });
 
     const { recognizePais } = await import('./gemini-recognizer.js');
-    const result = await recognizePais(['photo']);
+    const result = await recognizePais(testPhoto);
 
     expect(result).toEqual(['003_livelive_honoka.png']);
   });
