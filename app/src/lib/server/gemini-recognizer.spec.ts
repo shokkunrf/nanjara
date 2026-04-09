@@ -51,7 +51,8 @@ describe('gemini-recognizer', () => {
     expect(mockFetch).toHaveBeenCalledOnce();
     const [url, options] = mockFetch.mock.calls[0];
     expect(url).toContain('test-model');
-    expect(url).toContain('key=test-key');
+    expect(url).not.toContain('key=');
+    expect(options.headers['x-goog-api-key']).toBe('test-key');
 
     const body = JSON.parse(options.body);
     const parts = body.contents[0].parts;

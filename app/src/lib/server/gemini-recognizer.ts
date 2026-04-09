@@ -84,9 +84,9 @@ export async function recognizePais(photos: string[]): Promise<string[]> {
     },
   };
 
-  const response = await fetch(`${API_URL}?key=${GEMINI_API_KEY}`, {
+  const response = await fetch(API_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
     body: JSON.stringify(body),
   });
 
