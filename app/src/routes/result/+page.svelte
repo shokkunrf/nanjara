@@ -5,10 +5,14 @@
   import { resolve } from '$app/paths';
   import type { RecognitionResult, PaiDetailMap, ScoringResult } from '$lib/types';
   import { score } from '$lib/services/scoring-engine.js';
+  import PaiSelectDrawer from '$lib/components/PaiSelectDrawer.svelte';
 
   let result: RecognitionResult | undefined = $state();
   let paiDetails: PaiDetailMap = $state({});
   let scoringResult: ScoringResult | null = $state(null);
+  let editingIndex: number | null = $state(null);
+  let drawerOpen = $derived(editingIndex !== null);
+  let currentPaiIds = $derived(result?.pais.map((p) => p.paiId) ?? []);
 
   onMount(async () => {
     result = (page.state as { result?: RecognitionResult }).result;
@@ -35,6 +39,14 @@
   function formatJara(jara: number): string {
     return jara.toLocaleString();
   }
+
+  async function handleReplace(paiId: string) {
+    if (editingIndex === null || !result) return;
+    result.pais[editingIndex] = { paiId };
+    editingIndex = null;
+    scoringResult = await score(result.pais.map((p) => p.paiId));
+    sessionStorage.setItem('recognitionResult', JSON.stringify(result));
+  }
 </script>
 
 {#if result}
@@ -43,12 +55,14 @@
     <p class="time">{result.processingTimeMs.toFixed(0)}ms</p>
 
     <ul class="pai-list">
-      {#each result.pais as pai, i (i)}
+      {#each result.pais as pai, i (pai.paiId)}
         <li class="pai-item">
-          <img src={`/pai-images/${pai.paiId}`} alt={getName(pai.paiId)} />
-          <div class="pai-info">
-            <span class="pai-name">{getName(pai.paiId)}</span>
-          </div>
+          <button class="pai-button" onclick={() => (editingIndex = i)}>
+            <img src={`/pai-images/${pai.paiId}`} alt={getName(pai.paiId)} />
+            <div class="pai-info">
+              <span class="pai-name">{getName(pai.paiId)}</span>
+            </div>
+          </button>
         </li>
       {/each}
     </ul>
@@ -86,6 +100,14 @@
   </div>
 {/if}
 
+<PaiSelectDrawer
+  open={drawerOpen}
+  {paiDetails}
+  {currentPaiIds}
+  onselect={handleReplace}
+  onclose={() => (editingIndex = null)}
+/>
+
 <style>
   :global(body) {
     overflow: auto !important;
@@ -115,21 +137,28 @@
     margin: 0;
     padding: 0;
     display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    justify-content: center;
+    flex-direction: column;
+    gap: 8px;
     width: 100%;
     max-width: 400px;
   }
 
-  .pai-item {
+  .pai-button {
     display: flex;
     align-items: center;
     gap: 8px;
     background: rgba(255, 255, 255, 0.1);
     border-radius: 8px;
     padding: 8px;
-    width: calc(50% - 6px);
+    width: 100%;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .pai-button:active {
+    background: rgba(255, 255, 255, 0.2);
   }
 
   .pai-item img {
