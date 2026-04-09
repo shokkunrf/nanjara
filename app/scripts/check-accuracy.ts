@@ -147,7 +147,13 @@ async function run() {
   const browser = await chromium.launch();
   const context = await browser.newContext({ ignoreHTTPSErrors: true });
 
-  const outputDir = path.resolve(new URL('.', import.meta.url).pathname, '..', 'static', 'e2e', 'output');
+  const outputDir = path.resolve(
+    new URL('.', import.meta.url).pathname,
+    '..',
+    'static',
+    'e2e',
+    'output',
+  );
   fs.mkdirSync(outputDir, { recursive: true });
 
   let totalCorrect = 0;
