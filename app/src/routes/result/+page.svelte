@@ -3,13 +3,14 @@
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
-  import type { RecognitionResult, PaiDetailMap, ScoringResult } from '$lib/types';
+  import type { RecognitionResult, PaiDetailMap, ScoringResult, ScoringRule } from '$lib/types';
   import { score } from '$lib/services/scoring-engine.js';
   import PaiSelectDrawer from '$lib/components/PaiSelectDrawer.svelte';
 
   let result: RecognitionResult | undefined = $state();
   let paiDetails: PaiDetailMap = $state({});
   let scoringResult: ScoringResult | null = $state(null);
+  let yakuColorMap: Record<string, string> = $state({});
   let editingIndex: number | null = $state(null);
   let drawerOpen = $derived(editingIndex !== null);
   let currentPaiIds = $derived(result?.pais.map((p) => p.paiId) ?? []);
@@ -25,7 +26,12 @@
       }
     }
 
-    paiDetails = await fetch('/pai-details.json').then((r) => r.json());
+    const [pd, rules] = await Promise.all([
+      fetch('/pai-details.json').then((r) => r.json()),
+      fetch('/rules.json').then((r) => r.json()) as Promise<ScoringRule[]>,
+    ]);
+    paiDetails = pd;
+    yakuColorMap = Object.fromEntries(rules.map((r) => [r.name, r.color]));
 
     if (result) {
       scoringResult = await score(result.pais.map((p) => p.paiId));
@@ -34,6 +40,10 @@
 
   function getName(paiId: string): string {
     return paiDetails[paiId]?.name ?? paiId;
+  }
+
+  function yakuColor(yaku: string): string {
+    return yakuColorMap[yaku] ?? '#888';
   }
 
   function formatJara(jara: number): string {
@@ -61,6 +71,16 @@
             <img src={`/pai-images/${pai.paiId}`} alt={getName(pai.paiId)} />
             <div class="pai-info">
               <span class="pai-name">{getName(pai.paiId)}</span>
+              {#if paiDetails[pai.paiId]?.yaku.length}
+                <div class="pai-yaku">
+                  {#each paiDetails[pai.paiId].yaku as yaku (yaku)}
+                    <span
+                      class="yaku-tag"
+                      style="border-color: {yakuColor(yaku)}; color: {yakuColor(yaku)}">{yaku}</span
+                    >
+                  {/each}
+                </div>
+              {/if}
             </div>
           </button>
         </li>
@@ -172,6 +192,7 @@
   .pai-info {
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
     gap: 2px;
     min-width: 0;
   }
@@ -181,6 +202,20 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .pai-yaku {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .yaku-tag {
+    font-size: 10px;
+    border: 1px solid;
+    border-radius: 4px;
+    padding: 1px 6px;
+    white-space: nowrap;
   }
 
   .scoring {

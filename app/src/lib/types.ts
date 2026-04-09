@@ -83,6 +83,8 @@ export interface ScoringRule {
   requiredCount: number;
   /** この加点役の固定ジャラ（点数） */
   jara: number;
+  /** タグ表示色（CSSカラー） */
+  color: string;
 }
 
 /**

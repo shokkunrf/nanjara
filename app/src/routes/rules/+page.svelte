@@ -24,7 +24,7 @@
   {#if rules.length > 0}
     <ul class="rule-list">
       {#each rules as rule, i (i)}
-        <li class="rule-item">
+        <li class="rule-item" style="border-left: 3px solid {rule.color}">
           <span class="rule-name">{rule.name}</span>
           <span class="rule-count">{rule.requiredCount}枚</span>
           <span class="rule-jara">{formatJara(rule.jara)} ジャラ</span>
