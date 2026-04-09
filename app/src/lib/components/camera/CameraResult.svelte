@@ -2,9 +2,17 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import CameraLayout from './CameraLayout.svelte';
-  import { recognizeImage } from '$lib/services/recognition-service.js';
+  import type { RecognitionResult } from '$lib/types';
 
-  let { imageUrl, onretake }: { imageUrl: string; onretake: () => void } = $props();
+  let {
+    imageUrl,
+    recognitionPromise,
+    onretake,
+  }: {
+    imageUrl: string;
+    recognitionPromise: Promise<RecognitionResult>;
+    onretake: () => void;
+  } = $props();
 
   let isRecognizing = $state(false);
   let errorMessage = $state('');
@@ -14,7 +22,7 @@
     errorMessage = '';
 
     try {
-      const result = await recognizeImage(imageUrl);
+      const result = await recognitionPromise;
       await goto(resolve('/result'), { state: { result } });
     } catch {
       errorMessage = '認識に失敗しました。再撮影してください。';

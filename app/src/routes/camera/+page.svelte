@@ -2,30 +2,31 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
-  import type { CameraMode, HistoryBackEventDetail } from '$lib/types';
+  import type { HistoryBackEventDetail, RecognitionResult } from '$lib/types';
+  import { recognizeImage } from '$lib/services/recognition-service.js';
   import CameraCapture from '$lib/components/camera/CameraCapture.svelte';
   import CameraResult from '$lib/components/camera/CameraResult.svelte';
 
-  let mode: CameraMode = $state('capture');
   let capturedImageUrl: string = $state('');
+  let recognitionPromise: Promise<RecognitionResult> | null = $state(null);
 
   function handleCapture(blob: Blob) {
     capturedImageUrl = URL.createObjectURL(blob);
-    mode = 'preview';
     history.pushState({ label: 'camera-preview' }, '');
+    recognitionPromise = recognizeImage(capturedImageUrl);
   }
 
   function handleRetake() {
+    recognitionPromise = null;
     if (capturedImageUrl) {
       URL.revokeObjectURL(capturedImageUrl);
     }
     capturedImageUrl = '';
-    mode = 'capture';
   }
 
   onMount(() => {
     const handleBack = ((e: CustomEvent<HistoryBackEventDetail>) => {
-      if (mode === 'preview') {
+      if (recognitionPromise) {
         handleRetake();
         e.detail.prevented = true;
       }
@@ -40,8 +41,8 @@
   });
 </script>
 
-{#if mode === 'capture'}
-  <CameraCapture oncapture={handleCapture} onclose={() => goto(resolve('/'))} />
+{#if recognitionPromise}
+  <CameraResult imageUrl={capturedImageUrl} {recognitionPromise} onretake={handleRetake} />
 {:else}
-  <CameraResult imageUrl={capturedImageUrl} onretake={handleRetake} />
+  <CameraCapture oncapture={handleCapture} onclose={() => goto(resolve('/'))} />
 {/if}
