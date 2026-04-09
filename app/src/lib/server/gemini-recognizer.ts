@@ -11,12 +11,6 @@ const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMIN
 /** カタログ画像のBase64キャッシュ */
 let catalogCache: string[] | null = null;
 
-/** 番号→ID対応テキスト */
-let idListCache: string | null = null;
-
-/** 3桁番号→ID の対応マップ */
-let numberToIdMap: Map<string, string> | null = null;
-
 async function loadCatalogs(): Promise<string[]> {
   if (catalogCache) return catalogCache;
 
@@ -31,22 +25,8 @@ async function loadCatalogs(): Promise<string[]> {
   return catalogs;
 }
 
-function loadIdList(): string {
-  if (idListCache) return idListCache;
-
-  const details: Record<string, { name: string }> = paiDetailsJson;
-  const ids = Object.keys(details).sort();
-
-  numberToIdMap = new Map();
-  for (const id of ids) {
-    numberToIdMap.set(id.substring(0, 3), id);
-  }
-
-  idListCache = ids.map((id) => `${id.substring(0, 3)}: ${id}`).join('\n');
-  return idListCache;
-}
-
-function buildPrompt(idList: string): string {
+function buildPrompt(numberToIdMap: Map<string, string>): string {
+  const idList = [...numberToIdMap.entries()].map(([num, id]) => `${num}: ${id}`).join('\n');
   return `以下に4枚の参照カタログ画像を提示します。各カタログは7列×3行のグリッドに21種の麻雀パイが並び、各セル下に3桁番号があります。
 
 最後の2枚が撮影写真です（同じ写真の色調違い）。両方を見比べてカタログの絵柄と視覚的に比較し識別してください。
@@ -81,10 +61,17 @@ export async function recognizePais(photos: string[]): Promise<string[]> {
     throw new Error('GEMINI_API_KEY is not configured');
   }
 
-  const [catalogs, idList] = await Promise.all([loadCatalogs(), Promise.resolve(loadIdList())]);
+  const catalogs = await loadCatalogs();
+
+  const details: Record<string, { name: string }> = paiDetailsJson;
+  const ids = Object.keys(details).sort();
+  const numberToIdMap = new Map<string, string>();
+  for (const id of ids) {
+    numberToIdMap.set(id.substring(0, 3), id);
+  }
 
   const parts: Record<string, unknown>[] = [
-    { text: buildPrompt(idList) },
+    { text: buildPrompt(numberToIdMap) },
     ...catalogs.map((c) => ({ inline_data: { mime_type: 'image/png', data: c } })),
     ...photos.map((p) => ({ inline_data: { mime_type: 'image/jpeg', data: p } })),
   ];
@@ -125,7 +112,7 @@ export async function recognizePais(photos: string[]): Promise<string[]> {
   return numbers
     .map((n) => {
       const padded = n.padStart(3, '0');
-      return numberToIdMap?.get(padded) ?? null;
+      return numberToIdMap.get(padded) ?? null;
     })
     .filter((id): id is string => id !== null);
 }
