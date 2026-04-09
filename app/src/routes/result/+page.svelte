@@ -6,14 +6,21 @@
   import type { RecognitionResult, PaiDetailMap, ScoringResult } from '$lib/types';
   import { score } from '$lib/services/scoring-engine.js';
 
-  let result: RecognitionResult | undefined = $derived(
-    (page.state as { result?: RecognitionResult }).result,
-  );
-
+  let result: RecognitionResult | undefined = $state();
   let paiDetails: PaiDetailMap = $state({});
   let scoringResult: ScoringResult | null = $state(null);
 
   onMount(async () => {
+    result = (page.state as { result?: RecognitionResult }).result;
+    if (!result) {
+      try {
+        const stored = sessionStorage.getItem('recognitionResult');
+        if (stored) result = JSON.parse(stored);
+      } catch {
+        // ignore invalid data
+      }
+    }
+
     paiDetails = await fetch('/pai-details.json').then((r) => r.json());
 
     if (result) {

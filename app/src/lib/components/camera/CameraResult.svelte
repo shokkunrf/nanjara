@@ -23,6 +23,7 @@
 
     try {
       const result = await recognitionPromise;
+      sessionStorage.setItem('recognitionResult', JSON.stringify(result));
       await goto(resolve('/result'), { state: { result } });
     } catch {
       errorMessage = '認識に失敗しました。再撮影してください。';
