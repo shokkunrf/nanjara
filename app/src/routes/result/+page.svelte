@@ -4,7 +4,7 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import type { RecognitionResult, PaiDetailMap, ScoringResult, ScoringRule } from '$lib/types';
-  import { score } from '$lib/services/scoring-engine.js';
+  import { score, loadInactiveYakuIds } from '$lib/services/scoring-engine.js';
   import PaiSelectDrawer from '$lib/components/PaiSelectDrawer.svelte';
 
   let result: RecognitionResult | undefined = $state();
@@ -40,7 +40,10 @@
     }
 
     if (result) {
-      scoringResult = await score(result.pais.map((p) => p.paiId));
+      scoringResult = await score(
+        result.pais.map((p) => p.paiId),
+        loadInactiveYakuIds(),
+      );
     }
   });
 
@@ -60,7 +63,10 @@
     if (editingIndex === null || !result) return;
     result.pais[editingIndex] = { paiId };
     editingIndex = null;
-    scoringResult = await score(result.pais.map((p) => p.paiId));
+    scoringResult = await score(
+      result.pais.map((p) => p.paiId),
+      loadInactiveYakuIds(),
+    );
     sessionStorage.setItem('recognitionResult', JSON.stringify(result));
   }
 </script>

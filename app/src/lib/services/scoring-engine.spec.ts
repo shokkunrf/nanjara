@@ -107,11 +107,10 @@ describe('scoring-engine', () => {
   it('単一加点役が成立する場合、matchedRulesに含まれる', async () => {
     const { score } = await import('./scoring-engine.js');
 
-    const result = await score([
-      '003_livelive_honoka.png',
-      '005_livelive_kotori.png',
-      '006_livelive_umi.png',
-    ]);
+    const result = await score(
+      ['003_livelive_honoka.png', '005_livelive_kotori.png', '006_livelive_umi.png'],
+      new Set(),
+    );
 
     const lovelive = result.matchedRules.find((m) => m.rule.name === 'ラブライブ！');
     expect(lovelive).toBeDefined();
@@ -123,11 +122,10 @@ describe('scoring-engine', () => {
     const { score } = await import('./scoring-engine.js');
 
     // ラブライブ！×3 → 20000, Printemps×2 → 不成立, 主人公×1 → 20000
-    const result = await score([
-      '003_livelive_honoka.png',
-      '005_livelive_kotori.png',
-      '006_livelive_umi.png',
-    ]);
+    const result = await score(
+      ['003_livelive_honoka.png', '005_livelive_kotori.png', '006_livelive_umi.png'],
+      new Set(),
+    );
 
     expect(result.totalJara).toBe(20000 + 20000); // ラブライブ！ + 主人公
   });
@@ -135,11 +133,10 @@ describe('scoring-engine', () => {
   it('requiredCountに満たない役は成立しない', async () => {
     const { score } = await import('./scoring-engine.js');
 
-    const result = await score([
-      '003_livelive_honoka.png',
-      '005_livelive_kotori.png',
-      '006_livelive_umi.png',
-    ]);
+    const result = await score(
+      ['003_livelive_honoka.png', '005_livelive_kotori.png', '006_livelive_umi.png'],
+      new Set(),
+    );
 
     // μ's: 3枚だが requiredCount=9 → 不成立
     const muse = result.matchedRules.find((m) => m.rule.name === "μ's");
@@ -153,7 +150,7 @@ describe('scoring-engine', () => {
   it('requiredCount=1の役は1枚でも成立し、matchedCountが正確', async () => {
     const { score } = await import('./scoring-engine.js');
 
-    const result = await score(['014_sunshine_chika.png', '040_superstar_kanon.png']);
+    const result = await score(['014_sunshine_chika.png', '040_superstar_kanon.png'], new Set());
 
     // 主人公×2 → requiredCount=1 なので成立
     const shujinko = result.matchedRules.find((m) => m.rule.name === '主人公');
@@ -164,7 +161,7 @@ describe('scoring-engine', () => {
   it('空の手牌でtotalJara=0, matchedRules=[]', async () => {
     const { score } = await import('./scoring-engine.js');
 
-    const result = await score([]);
+    const result = await score([], new Set());
 
     expect(result.matchedRules).toEqual([]);
     expect(result.totalJara).toBe(0);
@@ -173,11 +170,10 @@ describe('scoring-engine', () => {
   it('matchedCountは正確な出現回数を返す', async () => {
     const { score } = await import('./scoring-engine.js');
 
-    const result = await score([
-      '003_livelive_honoka.png',
-      '005_livelive_kotori.png',
-      '006_livelive_umi.png',
-    ]);
+    const result = await score(
+      ['003_livelive_honoka.png', '005_livelive_kotori.png', '006_livelive_umi.png'],
+      new Set(),
+    );
 
     const shujinko = result.matchedRules.find((m) => m.rule.name === '主人公');
     expect(shujinko).toBeDefined();
@@ -187,17 +183,20 @@ describe('scoring-engine', () => {
   it("μ's全員9枚で複数の加点役が同時に成立する", async () => {
     const { score } = await import('./scoring-engine.js');
 
-    const result = await score([
-      '003_livelive_honoka.png', // Printemps, 2年生, 主人公
-      '004_livelive_eli.png', // BiBi, 3年生
-      '005_livelive_kotori.png', // Printemps, 2年生
-      '006_livelive_umi.png', // lily white, 2年生
-      '007_livelive_rin.png', // lily white, にこりんぱな, 1年生
-      '008_livelive_maki.png', // BiBi, 1年生
-      '009_livelive_nozomi.png', // lily white, 3年生
-      '010_livelive_hanayo.png', // Printemps, にこりんぱな, 1年生
-      '011_livelive_nico.png', // BiBi, にこりんぱな, 3年生
-    ]);
+    const result = await score(
+      [
+        '003_livelive_honoka.png', // Printemps, 2年生, 主人公
+        '004_livelive_eli.png', // BiBi, 3年生
+        '005_livelive_kotori.png', // Printemps, 2年生
+        '006_livelive_umi.png', // lily white, 2年生
+        '007_livelive_rin.png', // lily white, にこりんぱな, 1年生
+        '008_livelive_maki.png', // BiBi, 1年生
+        '009_livelive_nozomi.png', // lily white, 3年生
+        '010_livelive_hanayo.png', // Printemps, にこりんぱな, 1年生
+        '011_livelive_nico.png', // BiBi, にこりんぱな, 3年生
+      ],
+      new Set(),
+    );
 
     // ラブライブ！×9 → requiredCount=3 (20000) と requiredCount=9 (360000) の両方成立
     // μ's×9 → 240000
@@ -216,20 +215,23 @@ describe('scoring-engine', () => {
   it('3シリーズ×3枚のアガりで各シリーズのrequiredCount=3が成立する', async () => {
     const { score } = await import('./scoring-engine.js');
 
-    const result = await score([
-      // ラブライブ！×3
-      '003_livelive_honoka.png',
-      '005_livelive_kotori.png',
-      '006_livelive_umi.png',
-      // サンシャイン×3
-      '014_sunshine_chika.png',
-      '015_sunshine_riko.png',
-      '018_sunshine_you.png',
-      // スーパースター×3
-      '040_superstar_kanon.png',
-      '041_superstar_kuku.png',
-      '042_superstar_chisato.png',
-    ]);
+    const result = await score(
+      [
+        // ラブライブ！×3
+        '003_livelive_honoka.png',
+        '005_livelive_kotori.png',
+        '006_livelive_umi.png',
+        // サンシャイン×3
+        '014_sunshine_chika.png',
+        '015_sunshine_riko.png',
+        '018_sunshine_you.png',
+        // スーパースター×3
+        '040_superstar_kanon.png',
+        '041_superstar_kuku.png',
+        '042_superstar_chisato.png',
+      ],
+      new Set(),
+    );
 
     // 各シリーズ3枚ずつ → requiredCount=3 がそれぞれ成立
     const lovelive = result.matchedRules.find(
@@ -276,6 +278,8 @@ describe('scoring-engine', () => {
     mockFetch.mockResolvedValue({ ok: false, status: 500 });
     const { score, ScoringError } = await import('./scoring-engine.js');
 
-    await expect(score(['003_livelive_honoka.png'])).rejects.toBeInstanceOf(ScoringError);
+    await expect(score(['003_livelive_honoka.png'], new Set())).rejects.toBeInstanceOf(
+      ScoringError,
+    );
   });
 });
