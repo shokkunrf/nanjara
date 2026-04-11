@@ -1,6 +1,9 @@
 import { read } from '$app/server';
 import { GEMINI_API_KEY, GEMINI_MODEL } from '$env/static/private';
 import sharp from 'sharp';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import crypto from 'node:crypto';
 import catalog1 from '$lib/server/assets/pai-catalog-1.png';
 import catalog2 from '$lib/server/assets/pai-catalog-2.png';
 import catalog3 from '$lib/server/assets/pai-catalog-3.png';
@@ -95,11 +98,11 @@ function boostSaturation(data: Uint8ClampedArray, factor: number): void {
 }
 
 /**
- * 1枚の写真バッファから無加工版と色調補正版の2枚のBase64を生成する。
+ * 写真バッファから無加工版と色調補正版を生成する。
  */
-async function preparePhotos(photoBuffer: Buffer): Promise<string[]> {
-  const base64Original = photoBuffer.toString('base64');
-
+async function preparePhotos(
+  photoBuffer: Buffer,
+): Promise<{ original: Buffer; corrected: Buffer }> {
   const { data, info } = await sharp(photoBuffer)
     .ensureAlpha()
     .raw()
@@ -108,13 +111,28 @@ async function preparePhotos(photoBuffer: Buffer): Promise<string[]> {
   uniformBrightness(pixels, 1.15, 1.4);
   boostSaturation(pixels, 1.6);
 
-  const correctedBuffer = await sharp(Buffer.from(pixels.buffer), {
+  const corrected = await sharp(Buffer.from(pixels.buffer), {
     raw: { width: info.width, height: info.height, channels: 4 },
   })
     .jpeg({ quality: 85 })
     .toBuffer();
 
-  return [base64Original, correctedBuffer.toString('base64')];
+  return { original: photoBuffer, corrected };
+}
+
+const DEBUG_OUT_DIR = path.resolve(import.meta.dirname, '../../../static/e2e/output');
+let debugDirReady: Promise<void> | null = null;
+
+async function dumpDebugImages(received: Buffer, corrected: Buffer): Promise<void> {
+  if (!debugDirReady) {
+    debugDirReady = fs.mkdir(DEBUG_OUT_DIR, { recursive: true }).then(() => undefined);
+  }
+  await debugDirReady;
+  const stamp = `${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+  await Promise.all([
+    fs.writeFile(path.join(DEBUG_OUT_DIR, `${stamp}_received.jpg`), received),
+    fs.writeFile(path.join(DEBUG_OUT_DIR, `${stamp}_corrected.jpg`), corrected),
+  ]);
 }
 
 /**
@@ -130,15 +148,17 @@ export async function recognizePais(photoBuffer: Buffer): Promise<string[]> {
   }
 
   let t = performance.now();
-  const [catalogs, preparedPhotos] = await Promise.all([
-    loadCatalogs(),
-    preparePhotos(photoBuffer),
-  ]);
+  const [catalogs, prepared] = await Promise.all([loadCatalogs(), preparePhotos(photoBuffer)]);
   if (import.meta.env.DEV) {
     console.debug(
       `[recognize:server] カタログ読み込み+色調補正: ${(performance.now() - t).toFixed(0)}ms`,
     );
+    void dumpDebugImages(prepared.original, prepared.corrected);
   }
+  const preparedPhotos = [
+    prepared.original.toString('base64'),
+    prepared.corrected.toString('base64'),
+  ];
 
   const details: Record<string, { name: string }> = paiDetailsJson;
   const ids = Object.keys(details).sort();
