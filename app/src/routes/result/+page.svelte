@@ -14,7 +14,8 @@
   let errorMessage: string | undefined = $state();
   let editingIndex: number | null = $state(null);
   let drawerOpen = $derived(editingIndex !== null);
-  let currentPaiIds = $derived(result?.pais.map((p) => p.paiId) ?? []);
+  let currentPaiIds = $derived(result?.pais.filter((p) => p.paiId).map((p) => p.paiId) ?? []);
+  const HAND_SIZE = 9;
 
   onMount(async () => {
     result = (page.state as { result?: RecognitionResult }).result;
@@ -24,6 +25,12 @@
         if (stored) result = JSON.parse(stored);
       } catch {
         // ignore invalid data
+      }
+    }
+
+    if (result) {
+      while (result.pais.length < HAND_SIZE) {
+        result.pais.push({ paiId: '' });
       }
     }
 
@@ -39,12 +46,7 @@
       return;
     }
 
-    if (result) {
-      scoringResult = await score(
-        result.pais.map((p) => p.paiId),
-        loadInactiveYakuIds(),
-      );
-    }
+    scoringResult = await score(currentPaiIds, loadInactiveYakuIds());
   });
 
   function getName(paiId: string): string {
@@ -63,10 +65,7 @@
     if (editingIndex === null || !result) return;
     result.pais[editingIndex] = { paiId };
     editingIndex = null;
-    scoringResult = await score(
-      result.pais.map((p) => p.paiId),
-      loadInactiveYakuIds(),
-    );
+    scoringResult = await score(currentPaiIds, loadInactiveYakuIds());
     sessionStorage.setItem('recognitionResult', JSON.stringify(result));
   }
 </script>
@@ -82,23 +81,31 @@
     <p class="time">{result.processingTimeMs.toFixed(0)}ms</p>
 
     <ul class="pai-list">
-      {#each result.pais as pai, i (pai.paiId)}
+      {#each result.pais as pai, i (i)}
         <li class="pai-item">
           <button class="pai-button" onclick={() => (editingIndex = i)}>
-            <img src={`/pai-images/${pai.paiId}`} alt={getName(pai.paiId)} />
-            <div class="pai-info">
-              <span class="pai-name">{getName(pai.paiId)}</span>
-              {#if paiDetails[pai.paiId]?.yaku.length}
-                <div class="pai-yaku">
-                  {#each paiDetails[pai.paiId].yaku as yaku (yaku)}
-                    <span
-                      class="yaku-tag"
-                      style="border-color: {yakuColor(yaku)}; color: {yakuColor(yaku)}">{yaku}</span
-                    >
-                  {/each}
-                </div>
-              {/if}
-            </div>
+            {#if pai.paiId}
+              <img src={`/pai-images/${pai.paiId}`} alt={getName(pai.paiId)} />
+              <div class="pai-info">
+                <span class="pai-name">{getName(pai.paiId)}</span>
+                {#if paiDetails[pai.paiId]?.yaku.length}
+                  <div class="pai-yaku">
+                    {#each paiDetails[pai.paiId].yaku as yaku (yaku)}
+                      <span
+                        class="yaku-tag"
+                        style="border-color: {yakuColor(yaku)}; color: {yakuColor(yaku)}"
+                        >{yaku}</span
+                      >
+                    {/each}
+                  </div>
+                {/if}
+              </div>
+            {:else}
+              <div class="pai-empty"></div>
+              <div class="pai-info">
+                <span class="pai-name empty-label">未認識</span>
+              </div>
+            {/if}
           </button>
         </li>
       {/each}
@@ -206,6 +213,18 @@
     background: #222;
   }
 
+  .pai-empty {
+    width: 48px;
+    height: 64px;
+    border-radius: 4px;
+    background: #222;
+    border: 2px dashed #444;
+  }
+
+  .empty-label {
+    color: #555;
+  }
+
   .pai-info {
     display: flex;
     flex-direction: column;
@@ -295,6 +314,8 @@
   }
 
   .actions {
+    display: flex;
+    gap: 12px;
     margin-top: 24px;
     padding-bottom: 24px;
   }
