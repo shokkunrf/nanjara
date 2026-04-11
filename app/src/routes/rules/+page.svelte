@@ -48,6 +48,7 @@
   <header>
     <button class="back" onclick={() => goto(resolve('/'))}>← 戻る</button>
     <h1>ルール一覧</h1>
+    <button class="nav-link" onclick={() => goto(resolve('/hand'))}>手牌 →</button>
   </header>
 
   {#if errorMessage}
@@ -94,7 +95,8 @@
     margin-bottom: 16px;
   }
 
-  .back {
+  .back,
+  .nav-link {
     background: none;
     border: none;
     color: #e91e63;
@@ -102,6 +104,10 @@
     cursor: pointer;
     padding: 4px 0;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  .nav-link {
+    margin-left: auto;
   }
 
   h1 {

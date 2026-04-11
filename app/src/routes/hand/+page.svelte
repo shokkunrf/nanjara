@@ -26,12 +26,10 @@
       } catch {
         // ignore invalid data
       }
+      result ??= { pais: [], processingTimeMs: 0 };
     }
-
-    if (result) {
-      while (result.pais.length < HAND_SIZE) {
-        result.pais.push({ paiId: '' });
-      }
+    while (result.pais.length < HAND_SIZE) {
+      result.pais.push({ paiId: '' });
     }
 
     try {
@@ -77,8 +75,10 @@
   </div>
 {:else if result}
   <div class="result">
-    <h1>認識結果</h1>
-    <p class="time">{result.processingTimeMs.toFixed(0)}ms</p>
+    <h1>手牌</h1>
+    {#if result.processingTimeMs > 0}
+      <p class="time">{result.processingTimeMs.toFixed(0)}ms</p>
+    {/if}
 
     <ul class="pai-list">
       {#each result.pais as pai, i (i)}
@@ -134,13 +134,9 @@
     {/if}
 
     <div class="actions">
-      <button class="btn" onclick={() => goto(resolve('/camera'))}>再撮影</button>
+      <button class="btn" onclick={() => goto(resolve('/camera'))}>撮影</button>
+      <button class="btn" onclick={() => goto(resolve('/rules'))}>ルール</button>
     </div>
-  </div>
-{:else}
-  <div class="empty">
-    <p>認識結果がありません</p>
-    <button class="btn" onclick={() => goto(resolve('/camera'))}>撮影する</button>
   </div>
 {/if}
 

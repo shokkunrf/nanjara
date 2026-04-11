@@ -46,19 +46,27 @@ test.describe('ルール一覧ページ', () => {
   });
 });
 
-test.describe('認識結果ページ', () => {
-  test('直接アクセスすると「認識結果がありません」が表示される', async ({ page }) => {
-    await page.goto('/result');
+test.describe('手牌ページ', () => {
+  test('直接アクセスすると空の9枠が表示される', async ({ page }) => {
+    await page.goto('/hand');
 
-    await expect(page.getByText('認識結果がありません')).toBeVisible();
-    await expect(page.getByRole('button', { name: '撮影する' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '手牌' })).toBeVisible();
+    await expect(page.locator('.pai-item')).toHaveCount(9);
   });
 
-  test('「撮影する」ボタンで /camera に遷移する', async ({ page }) => {
-    await page.goto('/result');
+  test('「撮影」ボタンで /camera に遷移する', async ({ page }) => {
+    await page.goto('/hand');
 
-    await page.getByRole('button', { name: '撮影する' }).click();
+    await page.getByRole('button', { name: '撮影' }).click();
 
     await expect(page).toHaveURL('/camera');
+  });
+
+  test('「ルール」ボタンで /rules に遷移する', async ({ page }) => {
+    await page.goto('/hand');
+
+    await page.getByRole('button', { name: 'ルール' }).click();
+
+    await expect(page).toHaveURL('/rules');
   });
 });
