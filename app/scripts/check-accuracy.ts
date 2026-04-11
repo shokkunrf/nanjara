@@ -1,7 +1,8 @@
 /**
- * 認識精度チェックスクリプト
+ * 認識精度チェック＆処理時間計測スクリプト
  *
- * Playwright でアプリの実フローを通し、認識精度と処理時間を集計する。
+ * 専用ポート(5174)でdev serverを自動起動し、Playwright でアプリの実フローを通して
+ * 認識精度と処理時間を集計する。
  *
  * 使い方:
  *   npm run bench
@@ -9,6 +10,8 @@
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
+import { BASE_URL, startDevServer, stopDevServer } from './dev-server.ts';
+import { setupCameraMock, captureAndRecognize } from './camera-mock.ts';
 
 interface TestCase {
   image: string;
@@ -141,11 +144,16 @@ const TEST_CASES: TestCase[] = [
   },
 ];
 
-const BASE_URL = 'https://localhost:4173';
-
 async function run() {
-  const browser = await chromium.launch();
-  const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  console.log('dev server を起動中...');
+
+  const serverLogs: string[] = [];
+  await startDevServer((line) => {
+    if (line.includes('[recognize:server]')) {
+      serverLogs.push(line);
+    }
+  });
+  console.log('dev server 起動完了');
 
   const outputDir = path.resolve(
     new URL('.', import.meta.url).pathname,
@@ -160,153 +168,130 @@ async function run() {
   let totalExpected = 0;
   const times: number[] = [];
 
-  for (const tc of TEST_CASES) {
-    const page = await context.newPage();
-    const imageUrl = `/e2e/input/${tc.image}`;
+  const browser = await chromium.launch();
 
-    // Gemini APIリクエストをインターセプトして送信画像を保存
-    let geminiPhotoBase64: string | undefined;
-    page.on('request', (req) => {
-      if (req.url().includes('generativelanguage.googleapis.com')) {
-        try {
-          const body = JSON.parse(req.postData() ?? '{}');
-          const parts: { inline_data?: { mime_type: string; data: string } }[] =
-            body.contents?.[0]?.parts ?? [];
-          // 最後のJPEG画像が撮影写真
-          const jpegs = parts.filter((p) => p.inline_data?.mime_type === 'image/jpeg');
-          if (jpegs.length > 0) {
-            geminiPhotoBase64 = jpegs[jpegs.length - 1].inline_data!.data;
-          }
-        } catch {
-          // リクエストボディのパースに失敗した場合は無視
+  try {
+    for (const tc of TEST_CASES) {
+      serverLogs.length = 0;
+      const context = await browser.newContext({ ignoreHTTPSErrors: true });
+      const page = await context.newPage();
+      const imageUrl = `/e2e/input/${tc.image}`;
+
+      const clientLogs: string[] = [];
+      page.on('console', (msg) => {
+        if (msg.type() === 'debug' && msg.text().startsWith('[recognize]')) {
+          clientLogs.push(msg.text());
         }
-      }
-    });
-
-    // カメラモック: 撮影時にテスト画像を注入
-    await page.addInitScript((imgUrl: string) => {
-      const canvas = document.createElement('canvas');
-      canvas.width = 640;
-      canvas.height = 480;
-      const stream = canvas.captureStream(0);
-
-      // getSettings() を追加（CameraCapture が参照するため）
-      for (const track of stream.getVideoTracks()) {
-        const origGetSettings = track.getSettings.bind(track);
-        track.getSettings = () => ({ ...origGetSettings(), deviceId: 'mock-device' });
-      }
-
-      Object.defineProperty(navigator, 'mediaDevices', {
-        value: {
-          getUserMedia: () => Promise.resolve(stream),
-          enumerateDevices: () => Promise.resolve([]),
-        },
-        writable: true,
-        configurable: true,
       });
 
-      const originalToBlob = HTMLCanvasElement.prototype.toBlob;
-      HTMLCanvasElement.prototype.toBlob = function (callback, type, quality) {
-        if (this.style.display === 'none') {
-          fetch(imgUrl)
-            .then((r) => r.blob())
-            .then((blob) => callback(blob));
-        } else {
-          originalToBlob.call(this, callback, type, quality);
+      // Gemini APIリクエストをインターセプトして送信画像を保存
+      let geminiPhotoBase64: string | undefined;
+      page.on('request', (req) => {
+        if (req.url().includes('generativelanguage.googleapis.com')) {
+          try {
+            const body = JSON.parse(req.postData() ?? '{}');
+            const parts: { inline_data?: { mime_type: string; data: string } }[] =
+              body.contents?.[0]?.parts ?? [];
+            const jpegs = parts.filter((p) => p.inline_data?.mime_type === 'image/jpeg');
+            if (jpegs.length > 0) {
+              geminiPhotoBase64 = jpegs[jpegs.length - 1].inline_data!.data;
+            }
+          } catch {
+            // リクエストボディのパースに失敗した場合は無視
+          }
         }
-      };
-    }, imageUrl);
+      });
 
-    await page.goto(`${BASE_URL}/camera`);
+      await setupCameraMock(page, imageUrl);
+      await page.goto(`${BASE_URL}/camera`);
 
-    const shutterButton = page.getByRole('button', { name: '撮影' });
-    await shutterButton.waitFor({ state: 'visible', timeout: 10000 });
-    // ボタンが有効になるまで待つ
-    await page.waitForFunction(
-      () => !document.querySelector<HTMLButtonElement>('button[aria-label="撮影"]')?.disabled,
-      { timeout: 10000 },
+      // 結果ページまたはエラーを待つ
+      const errorOrResult = await Promise.race([
+        captureAndRecognize(page).then(() => 'result' as const),
+        page
+          .locator('.error')
+          .waitFor({ timeout: 60000 })
+          .then(() => 'error' as const),
+      ]);
+
+      if (errorOrResult === 'error') {
+        console.log(`${tc.image}: エラー（スキップ）`);
+        await context.close();
+        continue;
+      }
+
+      // Geminiに送信した画像を保存
+      if (geminiPhotoBase64) {
+        const baseName = tc.image.replace(/\.[^.]+$/, '');
+        const outPath = path.join(outputDir, `${baseName}_gemini.jpg`);
+        fs.writeFileSync(outPath, Buffer.from(geminiPhotoBase64, 'base64'));
+      }
+
+      // 処理時間
+      const timeText = await page.locator('.time').textContent();
+      const ms = parseFloat(timeText?.replace(/[^0-9.]/g, '') ?? '0');
+      times.push(ms);
+
+      // pai-details.json の読み込み完了を待つ（名前がIDのままでなくなるまで）
+      await page
+        .waitForFunction(
+          () => {
+            const names = document.querySelectorAll('.pai-name');
+            return names.length > 0 && ![...names].some((el) => el.textContent?.endsWith('.png'));
+          },
+          { timeout: 5000 },
+        )
+        .catch(() => {});
+
+      // 認識結果
+      const paiNames = await page.locator('.pai-name').allTextContents();
+
+      // 精度集計
+      let correct = 0;
+      const maxLen = Math.max(tc.expected.length, paiNames.length);
+      for (let i = 0; i < maxLen; i++) {
+        const mark = tc.expected[i] === paiNames[i] ? '✓' : '✗';
+        if (mark === '✓') correct++;
+        const expected = tc.expected[i] ?? '—';
+        const actual = paiNames[i] ?? '—';
+        console.log(`  ${mark} ${i + 1}. ${actual}${mark === '✗' ? ` (期待: ${expected})` : ''}`);
+      }
+
+      totalCorrect += correct;
+      totalExpected += tc.expected.length;
+
+      console.log(`${tc.image}: ${correct}/${tc.expected.length} — ${ms.toFixed(0)}ms`);
+
+      await new Promise((r) => setTimeout(r, 500));
+      console.log('─'.repeat(40));
+      console.log('クライアント:');
+      for (const log of clientLogs) console.log(`  ${log}`);
+      console.log('サーバー:');
+      for (const log of serverLogs) console.log(`  ${log}`);
+      console.log('─'.repeat(40));
+      console.log();
+      await context.close();
+    }
+
+    await browser.close();
+
+    // 集計
+    console.log('========================================');
+    console.log(
+      `合計: ${totalCorrect}/${totalExpected} (${((totalCorrect / totalExpected) * 100).toFixed(1)}%)`,
     );
-    await shutterButton.click();
-
-    const recognizeButton = page.getByRole('button', { name: '認識する' });
-    await recognizeButton.waitFor({ timeout: 5000 });
-    await recognizeButton.click();
-
-    // 結果ページまたはエラーを待つ
-    const errorOrResult = await Promise.race([
-      page.waitForURL(/\/result/, { timeout: 60000 }).then(() => 'result' as const),
-      page
-        .locator('.error')
-        .waitFor({ timeout: 60000 })
-        .then(() => 'error' as const),
-    ]);
-
-    if (errorOrResult === 'error') {
-      console.log(`${tc.image}: エラー（スキップ）`);
-      await page.close();
-      continue;
+    if (times.length > 0) {
+      const avg = times.reduce((a, b) => a + b, 0) / times.length;
+      console.log(`平均処理時間: ${avg.toFixed(0)}ms`);
     }
-
-    // Geminiに送信した画像を保存
-    if (geminiPhotoBase64) {
-      const baseName = tc.image.replace(/\.[^.]+$/, '');
-      const outPath = path.join(outputDir, `${baseName}_gemini.jpg`);
-      fs.writeFileSync(outPath, Buffer.from(geminiPhotoBase64, 'base64'));
-    }
-
-    // 処理時間
-    const timeText = await page.locator('.time').textContent();
-    const ms = parseFloat(timeText?.replace(/[^0-9.]/g, '') ?? '0');
-    times.push(ms);
-
-    // pai-details.json の読み込み完了を待つ（名前がIDのままでなくなるまで）
-    await page
-      .waitForFunction(
-        () => {
-          const names = document.querySelectorAll('.pai-name');
-          return names.length > 0 && ![...names].some((el) => el.textContent?.endsWith('.png'));
-        },
-        { timeout: 5000 },
-      )
-      .catch(() => {});
-
-    // 認識結果
-    const paiNames = await page.locator('.pai-name').allTextContents();
-
-    // 精度集計
-    let correct = 0;
-    const maxLen = Math.max(tc.expected.length, paiNames.length);
-    for (let i = 0; i < maxLen; i++) {
-      const mark = tc.expected[i] === paiNames[i] ? '✓' : '✗';
-      if (mark === '✓') correct++;
-      const expected = tc.expected[i] ?? '—';
-      const actual = paiNames[i] ?? '—';
-      console.log(`  ${mark} ${i + 1}. ${actual}${mark === '✗' ? ` (期待: ${expected})` : ''}`);
-    }
-
-    totalCorrect += correct;
-    totalExpected += tc.expected.length;
-
-    console.log(`${tc.image}: ${correct}/${tc.expected.length} — ${ms.toFixed(0)}ms`);
-    console.log();
-
-    await page.close();
+  } catch (err) {
+    console.error(err);
+    stopDevServer(1);
   }
-
-  await browser.close();
-
-  // 集計
-  console.log('========================================');
-  console.log(
-    `合計: ${totalCorrect}/${totalExpected} (${((totalCorrect / totalExpected) * 100).toFixed(1)}%)`,
-  );
-  if (times.length > 0) {
-    const avg = times.reduce((a, b) => a + b, 0) / times.length;
-    console.log(`平均処理時間: ${avg.toFixed(0)}ms`);
-  }
+  stopDevServer(0);
 }
 
 run().catch((err) => {
   console.error(err);
-  process.exit(1);
+  stopDevServer(1);
 });

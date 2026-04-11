@@ -129,10 +129,16 @@ export async function recognizePais(photoBuffer: Buffer): Promise<string[]> {
     throw new Error('GEMINI_API_KEY is not configured');
   }
 
+  let t = performance.now();
   const [catalogs, preparedPhotos] = await Promise.all([
     loadCatalogs(),
     preparePhotos(photoBuffer),
   ]);
+  if (import.meta.env.DEV) {
+    console.debug(
+      `[recognize:server] カタログ読み込み+色調補正: ${(performance.now() - t).toFixed(0)}ms`,
+    );
+  }
 
   const details: Record<string, { name: string }> = paiDetailsJson;
   const ids = Object.keys(details).sort();
@@ -155,6 +161,7 @@ export async function recognizePais(photoBuffer: Buffer): Promise<string[]> {
     },
   };
 
+  t = performance.now();
   const response = await fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
@@ -167,6 +174,9 @@ export async function recognizePais(photoBuffer: Buffer): Promise<string[]> {
   }
 
   const data = await response.json();
+  if (import.meta.env.DEV) {
+    console.debug(`[recognize:server] Gemini API: ${(performance.now() - t).toFixed(0)}ms`);
+  }
   const responseParts = data.candidates?.[0]?.content?.parts ?? [];
   const text = responseParts.filter((p: { thought?: boolean }) => !p.thought).pop()?.text;
   if (!text) {

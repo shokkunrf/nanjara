@@ -38,11 +38,16 @@ function runExtractBand(
  * バンド検出に失敗した場合は全体画像をフォールバック。
  */
 async function preparePhoto(imageUrl: string): Promise<Blob> {
+  let t = performance.now();
   const response = await fetch(imageUrl);
   const blob = await response.blob();
   const bitmap = await createImageBitmap(blob);
+  if (import.meta.env.DEV) {
+    console.debug(`[recognize] 画像読み込み: ${(performance.now() - t).toFixed(0)}ms`);
+  }
 
   // バンド切り出しを試みる
+  t = performance.now();
   const fullCanvas = new OffscreenCanvas(bitmap.width, bitmap.height);
   const fullCtx = fullCanvas.getContext('2d')!;
   fullCtx.drawImage(bitmap, 0, 0);
@@ -53,6 +58,9 @@ async function preparePhoto(imageUrl: string): Promise<Blob> {
     fullImageData.width,
     fullImageData.height,
   );
+  if (import.meta.env.DEV) {
+    console.debug(`[recognize] バンド切り出し: ${(performance.now() - t).toFixed(0)}ms`);
+  }
 
   // バンド品質判定:
   // - 幅に対して高さが十分（>15%）
@@ -62,6 +70,7 @@ async function preparePhoto(imageUrl: string): Promise<Blob> {
     bandImageData.height / bandImageData.width > 0.15 &&
     (bandImageData.width * bandImageData.height) / (bitmap.width * bitmap.height) > 0.1;
 
+  t = performance.now();
   let srcBitmap: ImageBitmap;
   if (isBandUsable && bandImageData) {
     // バンド切り出し成功 → RGBA データから ImageBitmap に変換
@@ -88,7 +97,12 @@ async function preparePhoto(imageUrl: string): Promise<Blob> {
   ctx.drawImage(srcBitmap, 0, 0, w, h);
   srcBitmap.close();
 
-  return canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 });
+  const jpegBlob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 });
+  if (import.meta.env.DEV) {
+    console.debug(`[recognize] リサイズ+JPEG変換: ${(performance.now() - t).toFixed(0)}ms`);
+  }
+
+  return jpegBlob;
 }
 
 /**
@@ -102,7 +116,11 @@ export async function recognizeWithGemini(imageUrl: string): Promise<Recognition
   const start = performance.now();
 
   const photoBlob = await preparePhoto(imageUrl);
+  if (import.meta.env.DEV) {
+    console.debug(`[recognize] 前処理合計: ${(performance.now() - start).toFixed(0)}ms`);
+  }
 
+  const apiStart = performance.now();
   const formData = new FormData();
   formData.append('photo', photoBlob);
 
@@ -117,11 +135,19 @@ export async function recognizeWithGemini(imageUrl: string): Promise<Recognition
   }
 
   const { paiIds } = (await response.json()) as { paiIds: PaiId[] };
+  if (import.meta.env.DEV) {
+    console.debug(`[recognize] APIリクエスト: ${(performance.now() - apiStart).toFixed(0)}ms`);
+  }
 
   const pais = paiIds.map((paiId) => ({ paiId }));
 
+  const total = performance.now() - start;
+  if (import.meta.env.DEV) {
+    console.debug(`[recognize] 全体: ${total.toFixed(0)}ms`);
+  }
+
   return {
     pais,
-    processingTimeMs: performance.now() - start,
+    processingTimeMs: total,
   };
 }
