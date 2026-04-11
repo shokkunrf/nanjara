@@ -3,366 +3,427 @@
     "name": "ラブライブ！",
     "requiredCount": 3,
     "jara": 20000,
-    "color": "#e4007f"
+    "color": "#e4007f",
+    "perPai": false
   },
   {
     "name": "ラブライブ！",
     "requiredCount": 9,
     "jara": 30000,
-    "color": "#e4007f"
+    "color": "#e4007f",
+    "perPai": false
   },
   {
     "name": "ラブライブ！サンシャイン!!",
     "requiredCount": 3,
     "jara": 20000,
-    "color": "#009fe8"
+    "color": "#009fe8",
+    "perPai": false
   },
   {
     "name": "ラブライブ！サンシャイン!!",
     "requiredCount": 9,
     "jara": 30000,
-    "color": "#009fe8"
+    "color": "#009fe8",
+    "perPai": false
   },
   {
     "name": "ラブライブ！虹ヶ咲学園スクールアイドル同好会",
     "requiredCount": 3,
     "jara": 20000,
-    "color": "#f39800"
+    "color": "#f39800",
+    "perPai": false
   },
   {
     "name": "ラブライブ！虹ヶ咲学園スクールアイドル同好会",
     "requiredCount": 9,
     "jara": 30000,
-    "color": "#f39800"
+    "color": "#f39800",
+    "perPai": false
   },
   {
     "name": "ラブライブ！スーパースター!!",
     "requiredCount": 3,
     "jara": 20000,
-    "color": "#f5a100"
+    "color": "#f5a100",
+    "perPai": false
   },
   {
     "name": "ラブライブ！スーパースター!!",
     "requiredCount": 9,
     "jara": 30000,
-    "color": "#f5a100"
+    "color": "#f5a100",
+    "perPai": false
   },
   {
     "name": "ラブライブ！蓮ノ空女学院スクールアイドルクラブ",
     "requiredCount": 3,
     "jara": 20000,
-    "color": "#0068b7"
+    "color": "#0068b7",
+    "perPai": false
   },
   {
     "name": "ラブライブ！蓮ノ空女学院スクールアイドルクラブ",
     "requiredCount": 9,
     "jara": 30000,
-    "color": "#0068b7"
+    "color": "#0068b7",
+    "perPai": false
   },
   {
     "name": "スクールアイドルミュージカル",
     "requiredCount": 3,
     "jara": 20000,
-    "color": "#e53935"
+    "color": "#e53935",
+    "perPai": false
   },
   {
     "name": "スクールアイドルミュージカル",
     "requiredCount": 9,
     "jara": 30000,
-    "color": "#e53935"
+    "color": "#e53935",
+    "perPai": false
   },
   {
     "name": "イキヅライブ！",
     "requiredCount": 3,
     "jara": 20000,
-    "color": "#884898"
+    "color": "#884898",
+    "perPai": false
   },
   {
     "name": "イキヅライブ！",
     "requiredCount": 9,
     "jara": 30000,
-    "color": "#884898"
+    "color": "#884898",
+    "perPai": false
   },
   {
     "name": "1年生",
     "requiredCount": 5,
     "jara": 40000,
-    "color": "#64dd17"
+    "color": "#64dd17",
+    "perPai": false
   },
   {
     "name": "2年生",
     "requiredCount": 5,
     "jara": 20000,
-    "color": "#ffab00"
+    "color": "#ffab00",
+    "perPai": false
   },
   {
     "name": "3年生",
     "requiredCount": 5,
     "jara": 40000,
-    "color": "#ff1744"
+    "color": "#ff1744",
+    "perPai": false
   },
   {
     "name": "1月生まれ",
     "requiredCount": 3,
     "jara": 40000,
-    "color": "#b0bec5"
+    "color": "#b0bec5",
+    "perPai": false
   },
   {
     "name": "2月生まれ",
     "requiredCount": 3,
     "jara": 40000,
-    "color": "#b0bec5"
+    "color": "#b0bec5",
+    "perPai": false
   },
   {
     "name": "3月生まれ",
     "requiredCount": 4,
     "jara": 100000,
-    "color": "#b0bec5"
+    "color": "#b0bec5",
+    "perPai": false
   },
   {
     "name": "4月生まれ",
     "requiredCount": 3,
     "jara": 60000,
-    "color": "#b0bec5"
+    "color": "#b0bec5",
+    "perPai": false
   },
   {
     "name": "5月生まれ",
     "requiredCount": 4,
     "jara": 100000,
-    "color": "#b0bec5"
+    "color": "#b0bec5",
+    "perPai": false
   },
   {
     "name": "6月生まれ",
     "requiredCount": 3,
     "jara": 40000,
-    "color": "#b0bec5"
+    "color": "#b0bec5",
+    "perPai": false
   },
   {
     "name": "7月生まれ",
     "requiredCount": 4,
     "jara": 100000,
-    "color": "#b0bec5"
+    "color": "#b0bec5",
+    "perPai": false
   },
   {
     "name": "8月生まれ",
     "requiredCount": 3,
     "jara": 40000,
-    "color": "#b0bec5"
+    "color": "#b0bec5",
+    "perPai": false
   },
   {
     "name": "9月生まれ",
     "requiredCount": 3,
     "jara": 40000,
-    "color": "#b0bec5"
+    "color": "#b0bec5",
+    "perPai": false
   },
   {
     "name": "10月生まれ",
     "requiredCount": 4,
     "jara": 100000,
-    "color": "#b0bec5"
+    "color": "#b0bec5",
+    "perPai": false
   },
   {
     "name": "11月生まれ",
     "requiredCount": 4,
     "jara": 100000,
-    "color": "#b0bec5"
+    "color": "#b0bec5",
+    "perPai": false
   },
   {
     "name": "12月生まれ",
     "requiredCount": 4,
     "jara": 100000,
-    "color": "#b0bec5"
+    "color": "#b0bec5",
+    "perPai": false
   },
   {
     "name": "Printemps",
     "requiredCount": 3,
     "jara": 80000,
-    "color": "#f8c1c8"
+    "color": "#f8c1c8",
+    "perPai": false
   },
   {
     "name": "BiBi",
     "requiredCount": 3,
     "jara": 80000,
-    "color": "#6a5ba5"
+    "color": "#6a5ba5",
+    "perPai": false
   },
   {
     "name": "lily white",
     "requiredCount": 3,
     "jara": 80000,
-    "color": "#91c882"
+    "color": "#91c882",
+    "perPai": false
   },
   {
     "name": "CYaRon!",
     "requiredCount": 3,
     "jara": 80000,
-    "color": "#ff9547"
+    "color": "#ff9547",
+    "perPai": false
   },
   {
     "name": "Guilty Kiss",
     "requiredCount": 3,
     "jara": 80000,
-    "color": "#9a77cf"
+    "color": "#9a77cf",
+    "perPai": false
   },
   {
     "name": "AZALEA",
     "requiredCount": 3,
     "jara": 80000,
-    "color": "#e95294"
+    "color": "#e95294",
+    "perPai": false
   },
   {
     "name": "A・ZU・NA",
     "requiredCount": 3,
     "jara": 80000,
-    "color": "#ff4444"
+    "color": "#ff4444",
+    "perPai": false
   },
   {
     "name": "QU4RTZ",
     "requiredCount": 4,
     "jara": 100000,
-    "color": "#bb86fc"
+    "color": "#bb86fc",
+    "perPai": false
   },
   {
     "name": "DiverDiva",
     "requiredCount": 2,
     "jara": 40000,
-    "color": "#18c7c7"
+    "color": "#18c7c7",
+    "perPai": false
   },
   {
     "name": "R3BIRTH",
     "requiredCount": 3,
     "jara": 80000,
-    "color": "#7c8daa"
+    "color": "#7c8daa",
+    "perPai": false
   },
   {
     "name": "5yncri5e!",
     "requiredCount": 5,
     "jara": 100000,
-    "color": "#ff7043"
+    "color": "#ff7043",
+    "perPai": false
   },
   {
     "name": "CatChu!",
     "requiredCount": 3,
     "jara": 80000,
-    "color": "#f06292"
+    "color": "#f06292",
+    "perPai": false
   },
   {
     "name": "KALEIDOSCORE",
     "requiredCount": 3,
     "jara": 80000,
-    "color": "#42a5f5"
+    "color": "#42a5f5",
+    "perPai": false
   },
   {
     "name": "スリーズブーケ",
     "requiredCount": 2,
     "jara": 40000,
-    "color": "#ffb7c5"
+    "color": "#ffb7c5",
+    "perPai": false
   },
   {
     "name": "DOLLCHESTRA",
     "requiredCount": 2,
     "jara": 40000,
-    "color": "#ab47bc"
+    "color": "#ab47bc",
+    "perPai": false
   },
   {
     "name": "みらくらぱーく！",
     "requiredCount": 2,
     "jara": 40000,
-    "color": "#fdd835"
+    "color": "#fdd835",
+    "perPai": false
   },
   {
     "name": "Edel Note",
     "requiredCount": 2,
     "jara": 40000,
-    "color": "#78909c"
+    "color": "#78909c",
+    "perPai": false
   },
   {
     "name": "国士無双",
     "requiredCount": 9,
     "jara": 420000,
-    "color": "#ffd700"
+    "color": "#ffd700",
+    "perPai": false
   },
   {
     "name": "主人公",
     "requiredCount": 1,
     "jara": 20000,
-    "color": "#e040fb"
+    "color": "#e040fb",
+    "perPai": true
   },
   {
     "name": "μ's",
     "requiredCount": 9,
     "jara": 30000,
-    "color": "#e4007f"
+    "color": "#e4007f",
+    "perPai": false
   },
   {
     "name": "Aqours",
     "requiredCount": 9,
     "jara": 30000,
-    "color": "#009fe8"
+    "color": "#009fe8",
+    "perPai": false
   },
   {
     "name": "Liella!",
     "requiredCount": 9,
     "jara": 30000,
-    "color": "#f5a100"
+    "color": "#f5a100",
+    "perPai": false
   },
   {
     "name": "椿咲花女子高校アイドル部",
     "requiredCount": 5,
     "jara": 100000,
-    "color": "#e57373"
+    "color": "#e57373",
+    "perPai": false
   },
   {
     "name": "滝桜女学院アイドル部",
     "requiredCount": 5,
     "jara": 100000,
-    "color": "#7986cb"
+    "color": "#7986cb",
+    "perPai": false
   },
   {
     "name": "にこりんぱな",
     "requiredCount": 3,
     "jara": 80000,
-    "color": "#ff80ab"
+    "color": "#ff80ab",
+    "perPai": false
   },
   {
     "name": "クーカー",
     "requiredCount": 2,
     "jara": 40000,
-    "color": "#80cbc4"
+    "color": "#80cbc4",
+    "perPai": false
   },
   {
     "name": "トマカノーテ",
     "requiredCount": 3,
     "jara": 80000,
-    "color": "#ffab91"
+    "color": "#ffab91",
+    "perPai": false
   },
   {
     "name": "CHAKI!",
     "requiredCount": 4,
     "jara": 100000,
-    "color": "#a1887f"
+    "color": "#a1887f",
+    "perPai": false
   },
   {
     "name": "Mi×Nori=Tea",
     "requiredCount": 2,
     "jara": 40000,
-    "color": "#aed581"
+    "color": "#aed581",
+    "perPai": false
   },
   {
     "name": "Plumina",
     "requiredCount": 3,
     "jara": 80000,
-    "color": "#ce93d8"
+    "color": "#ce93d8",
+    "perPai": false
   },
   {
     "name": "SH1ON",
     "requiredCount": 1,
     "jara": 20000,
-    "color": "#90a4ae"
+    "color": "#90a4ae",
+    "perPai": false
   },
   {
     "name": "AiScReam",
     "requiredCount": 3,
     "jara": 60000,
-    "color": "#4dd0e1"
+    "color": "#4dd0e1",
+    "perPai": false
   }
 ]

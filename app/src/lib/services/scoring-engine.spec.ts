@@ -69,24 +69,48 @@ const testPaiDetails: PaiDetailMap = {
 };
 
 const testRules: ScoringRule[] = [
-  { name: 'ラブライブ！', requiredCount: 3, jara: 20000, color: '#e4007f' },
-  { name: 'ラブライブ！', requiredCount: 9, jara: 30000, color: '#e4007f' },
-  { name: 'ラブライブ！サンシャイン!!', requiredCount: 3, jara: 20000, color: '#009fe8' },
-  { name: 'ラブライブ！サンシャイン!!', requiredCount: 9, jara: 30000, color: '#009fe8' },
-  { name: 'ラブライブ！スーパースター!!', requiredCount: 3, jara: 20000, color: '#f5a100' },
-  { name: 'ラブライブ！スーパースター!!', requiredCount: 9, jara: 30000, color: '#f5a100' },
-  { name: "μ's", requiredCount: 9, jara: 30000, color: '#e4007f' },
-  { name: 'Printemps', requiredCount: 3, jara: 80000, color: '#f8c1c8' },
-  { name: 'BiBi', requiredCount: 3, jara: 80000, color: '#6a5ba5' },
-  { name: 'lily white', requiredCount: 3, jara: 80000, color: '#91c882' },
-  { name: 'CYaRon!', requiredCount: 3, jara: 80000, color: '#ff9547' },
-  { name: 'CatChu!', requiredCount: 3, jara: 80000, color: '#f06292' },
-  { name: 'にこりんぱな', requiredCount: 3, jara: 80000, color: '#ff80ab' },
-  { name: '1年生', requiredCount: 5, jara: 40000, color: '#64dd17' },
-  { name: '2年生', requiredCount: 5, jara: 20000, color: '#ffab00' },
-  { name: '3年生', requiredCount: 5, jara: 40000, color: '#ff1744' },
-  { name: '主人公', requiredCount: 1, jara: 20000, color: '#e040fb' },
-  { name: '8月生まれ', requiredCount: 3, jara: 40000, color: '#b0bec5' },
+  { name: 'ラブライブ！', requiredCount: 3, jara: 20000, color: '#e4007f', perPai: false },
+  { name: 'ラブライブ！', requiredCount: 9, jara: 30000, color: '#e4007f', perPai: false },
+  {
+    name: 'ラブライブ！サンシャイン!!',
+    requiredCount: 3,
+    jara: 20000,
+    color: '#009fe8',
+    perPai: false,
+  },
+  {
+    name: 'ラブライブ！サンシャイン!!',
+    requiredCount: 9,
+    jara: 30000,
+    color: '#009fe8',
+    perPai: false,
+  },
+  {
+    name: 'ラブライブ！スーパースター!!',
+    requiredCount: 3,
+    jara: 20000,
+    color: '#f5a100',
+    perPai: false,
+  },
+  {
+    name: 'ラブライブ！スーパースター!!',
+    requiredCount: 9,
+    jara: 30000,
+    color: '#f5a100',
+    perPai: false,
+  },
+  { name: "μ's", requiredCount: 9, jara: 30000, color: '#e4007f', perPai: false },
+  { name: 'Printemps', requiredCount: 3, jara: 80000, color: '#f8c1c8', perPai: false },
+  { name: 'BiBi', requiredCount: 3, jara: 80000, color: '#6a5ba5', perPai: false },
+  { name: 'lily white', requiredCount: 3, jara: 80000, color: '#91c882', perPai: false },
+  { name: 'CYaRon!', requiredCount: 3, jara: 80000, color: '#ff9547', perPai: false },
+  { name: 'CatChu!', requiredCount: 3, jara: 80000, color: '#f06292', perPai: false },
+  { name: 'にこりんぱな', requiredCount: 3, jara: 80000, color: '#ff80ab', perPai: false },
+  { name: '1年生', requiredCount: 5, jara: 40000, color: '#64dd17', perPai: false },
+  { name: '2年生', requiredCount: 5, jara: 20000, color: '#ffab00', perPai: false },
+  { name: '3年生', requiredCount: 5, jara: 40000, color: '#ff1744', perPai: false },
+  { name: '主人公', requiredCount: 1, jara: 20000, color: '#e040fb', perPai: true },
+  { name: '8月生まれ', requiredCount: 3, jara: 40000, color: '#b0bec5', perPai: false },
 ];
 
 describe('scoring-engine', () => {
@@ -267,9 +291,9 @@ describe('scoring-engine', () => {
     expect(shujinko!.matchedCount).toBe(3);
 
     // 合計: ラブライブ！20000 + サンシャイン20000 + スーパースター20000
-    //     + 2年生20000 + 主人公20000 = 100000
+    //     + 2年生20000 + 主人公20000×3(perPai) = 140000
     // CYaRon!は2枚(千歌・曜)でrequiredCount=3に不足
-    expect(result.totalJara).toBe(20000 + 20000 + 20000 + 20000 + 20000);
+    expect(result.totalJara).toBe(20000 + 20000 + 20000 + 20000 + 20000 * 3);
   });
 
   it('データ取得に失敗した場合ScoringErrorをスローする', async () => {

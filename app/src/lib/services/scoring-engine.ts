@@ -89,7 +89,10 @@ export async function score(paiIds: PaiId[], inactiveYakuIds: Set<string>): Prom
     }
   }
 
-  const totalJara = matchedRules.reduce((sum, m) => sum + m.rule.jara, 0);
+  const totalJara = matchedRules.reduce(
+    (sum, m) => sum + m.rule.jara * (m.rule.perPai ? m.matchedCount : 1),
+    0,
+  );
 
   return { matchedRules, totalJara };
 }

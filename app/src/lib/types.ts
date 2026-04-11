@@ -85,6 +85,8 @@ export interface ScoringRule {
   jara: number;
   /** タグ表示色（CSSカラー） */
   color: string;
+  /** trueの場合、ジャラを該当枚数倍にする（ドラ方式） */
+  perPai: boolean;
 }
 
 /**
