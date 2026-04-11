@@ -15,7 +15,7 @@
     "test:unit": "vitest",
     "test:e2e": "playwright test",
     "test": "npm run test:unit -- --run",
-    "bench": "node scripts/check-accuracy.ts"
+    "bench": "node scripts/bench.ts"
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.2",
