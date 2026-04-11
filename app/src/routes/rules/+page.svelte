@@ -5,9 +5,16 @@
   import type { ScoringRule } from '$lib/types';
 
   let rules: ScoringRule[] = $state([]);
+  let errorMessage: string | undefined = $state();
 
   onMount(async () => {
-    rules = await fetch('/rules.json').then((r) => r.json());
+    try {
+      const res = await fetch('/rules.json');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      rules = await res.json();
+    } catch {
+      errorMessage = 'ルールの読み込みに失敗しました。';
+    }
   });
 
   function formatJara(jara: number): string {
@@ -21,7 +28,9 @@
     <h1>ルール一覧</h1>
   </header>
 
-  {#if rules.length > 0}
+  {#if errorMessage}
+    <p class="error">{errorMessage}</p>
+  {:else if rules.length > 0}
     <ul class="rule-list">
       {#each rules as rule, i (i)}
         <li class="rule-item" style="border-left: 3px solid {rule.color}">
@@ -98,6 +107,12 @@
     font-size: 12px;
     color: #888;
     white-space: nowrap;
+  }
+
+  .error {
+    text-align: center;
+    color: #ff5252;
+    font-size: 14px;
   }
 
   .rule-jara {

@@ -11,6 +11,7 @@
   let paiDetails: PaiDetailMap = $state({});
   let scoringResult: ScoringResult | null = $state(null);
   let yakuColorMap: Record<string, string> = $state({});
+  let errorMessage: string | undefined = $state();
   let editingIndex: number | null = $state(null);
   let drawerOpen = $derived(editingIndex !== null);
   let currentPaiIds = $derived(result?.pais.map((p) => p.paiId) ?? []);
@@ -26,12 +27,17 @@
       }
     }
 
-    const [pd, rules] = await Promise.all([
-      fetch('/pai-details.json').then((r) => r.json()),
-      fetch('/rules.json').then((r) => r.json()) as Promise<ScoringRule[]>,
-    ]);
-    paiDetails = pd;
-    yakuColorMap = Object.fromEntries(rules.map((r) => [r.name, r.color]));
+    try {
+      const [pd, rules] = await Promise.all([
+        fetch('/pai-details.json').then((r) => r.json()),
+        fetch('/rules.json').then((r) => r.json()) as Promise<ScoringRule[]>,
+      ]);
+      paiDetails = pd;
+      yakuColorMap = Object.fromEntries(rules.map((r) => [r.name, r.color]));
+    } catch {
+      errorMessage = 'データの読み込みに失敗しました。';
+      return;
+    }
 
     if (result) {
       scoringResult = await score(result.pais.map((p) => p.paiId));
@@ -59,7 +65,12 @@
   }
 </script>
 
-{#if result}
+{#if errorMessage}
+  <div class="empty">
+    <p class="error">{errorMessage}</p>
+    <button class="btn" onclick={() => goto(resolve('/camera'))}>撮影する</button>
+  </div>
+{:else if result}
   <div class="result">
     <h1>認識結果</h1>
     <p class="time">{result.processingTimeMs.toFixed(0)}ms</p>
@@ -295,6 +306,11 @@
 
   .btn:active {
     background: rgba(255, 255, 255, 0.2);
+  }
+
+  .error {
+    color: #ff5252;
+    font-size: 14px;
   }
 
   .empty {
