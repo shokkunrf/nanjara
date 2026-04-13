@@ -5,13 +5,16 @@
  * 認識精度と処理時間を集計する。
  *
  * 使い方:
- *   npm run bench
+ *   npm run bench            # 全テストケース
+ *   npm run bench -- img1    # ファイル名先頭一致で1枚だけ実行
  */
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
 import { BASE_URL, startDevServer, stopDevServer } from './dev-server.ts';
 import { setupCameraMock, captureAndRecognize } from './camera-mock.ts';
+
+const filterArg = process.argv[2];
 
 interface TestCase {
   image: string;
@@ -168,10 +171,16 @@ async function run() {
   let totalExpected = 0;
   const times: number[] = [];
 
+  const cases = filterArg ? TEST_CASES.filter((tc) => tc.image.startsWith(filterArg)) : TEST_CASES;
+  if (cases.length === 0) {
+    console.error(`"${filterArg}" に一致するテストケースがありません`);
+    stopDevServer(1);
+  }
+
   const browser = await chromium.launch();
 
   try {
-    for (const tc of TEST_CASES) {
+    for (const tc of cases) {
       serverLogs.length = 0;
       const context = await browser.newContext({ ignoreHTTPSErrors: true });
       const page = await context.newPage();
