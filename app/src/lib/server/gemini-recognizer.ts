@@ -143,10 +143,6 @@ async function dumpDebugImages(received: Buffer, corrected: Buffer): Promise<voi
  * @returns パイIDの配列
  */
 export async function recognizePais(photoBuffer: Buffer): Promise<string[]> {
-  if (!GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY is not configured');
-  }
-
   let t = performance.now();
   const [catalogs, prepared] = await Promise.all([loadCatalogs(), preparePhotos(photoBuffer)]);
   if (import.meta.env.DEV) {
@@ -159,6 +155,15 @@ export async function recognizePais(photoBuffer: Buffer): Promise<string[]> {
     prepared.original.toString('base64'),
     prepared.corrected.toString('base64'),
   ];
+
+  // APIキー未設定時: DEV では bench 計測用に空配列、本番では設定エラー
+  if (!GEMINI_API_KEY) {
+    if (!import.meta.env.DEV) {
+      throw new Error('GEMINI_API_KEY is not configured');
+    }
+    console.debug('[recognize:server] GEMINI_API_KEY未設定のためGemini API呼び出しをスキップ');
+    return [];
+  }
 
   const details: Record<string, { name: string }> = paiDetailsJson;
   const ids = Object.keys(details).sort();
