@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractBand } from './pai-detector.js';
+import { detectBand } from './pai-detector.js';
 
 /**
  * テスト用ImageDataを生成する。
@@ -37,15 +37,15 @@ function createTestImage(
   return { data, width, height, colorSpace: 'srgb' } as ImageData;
 }
 
-describe('extractBand', () => {
+describe('detectBand', () => {
   it('均一な画像ではnullを返す', () => {
     const img = createTestImage(640, 480);
-    const result = extractBand(img);
+    const result = detectBand(img);
     // 均一画像にはパイの帯がないためnull
     expect(result === null || result instanceof Object).toBe(true);
   });
 
-  it('パイの帯がある画像でバンドを切り出す', () => {
+  it('パイの帯がある画像で4頂点を返す', () => {
     const width = 800;
     const height = 600;
     const bandY = 250;
@@ -76,12 +76,15 @@ describe('extractBand', () => {
     }
 
     const img = createTestImage(width, height, [180, 30, 30], rects);
-    const result = extractBand(img);
+    const result = detectBand(img);
 
     if (result) {
-      expect(result.width).toBeGreaterThan(0);
-      expect(result.height).toBeGreaterThan(0);
-      expect(result.data).toBeInstanceOf(Uint8ClampedArray);
+      expect(result.lt).toBeDefined();
+      expect(result.rt).toBeDefined();
+      expect(result.rb).toBeDefined();
+      expect(result.lb).toBeDefined();
+      expect(typeof result.lt.x).toBe('number');
+      expect(typeof result.lt.y).toBe('number');
     } else {
       // 合成画像の構成によっては検出されない場合もある
       expect(result).toBeNull();
@@ -90,7 +93,7 @@ describe('extractBand', () => {
 
   it('非常に小さい画像で安全にnullを返す', () => {
     const img = createTestImage(2, 2);
-    const result = extractBand(img);
+    const result = detectBand(img);
     expect(result).toBeNull();
   });
 });

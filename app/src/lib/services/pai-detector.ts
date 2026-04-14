@@ -8,67 +8,6 @@ const MAX_DIMENSION = 960;
 const WHITE_THRESHOLD = 170;
 const PAI_ASPECT_RATIO = 174 / 236; // 幅/高さ
 
-/**
- * RGBA画像を任意角度で回転する（バイリニア補間）。
- * 回転後の画像サイズは元画像を内包する矩形。
- */
-function rotateRgbaByAngle(
-  rgba: Uint8ClampedArray,
-  width: number,
-  height: number,
-  angle: number,
-): { data: Uint8ClampedArray<ArrayBuffer>; width: number; height: number } {
-  if (Math.abs(angle) < 0.01) return { data: new Uint8ClampedArray(rgba), width, height };
-
-  const cos = Math.cos(angle);
-  const sin = Math.sin(angle);
-  const absCos = Math.abs(cos);
-  const absSin = Math.abs(sin);
-
-  // 回転後のサイズ
-  const newW = Math.round(width * absCos + height * absSin);
-  const newH = Math.round(width * absSin + height * absCos);
-
-  // 元画像中心 / 新画像中心
-  const cx = width / 2,
-    cy = height / 2;
-  const ncx = newW / 2,
-    ncy = newH / 2;
-
-  const result = new Uint8ClampedArray(newW * newH * 4);
-
-  for (let ny = 0; ny < newH; ny++) {
-    for (let nx = 0; nx < newW; nx++) {
-      // 新画像の座標→元画像の座標（逆回転）
-      const dx = nx - ncx;
-      const dy = ny - ncy;
-      const srcX = cos * dx + sin * dy + cx;
-      const srcY = -sin * dx + cos * dy + cy;
-
-      // バイリニア補間（範囲外は端ピクセルにクランプ）
-      const clampedX = Math.min(Math.max(srcX, 0), width - 1);
-      const clampedY = Math.min(Math.max(srcY, 0), height - 1);
-      const x0 = Math.min(Math.floor(clampedX), width - 2);
-      const y0 = Math.min(Math.floor(clampedY), height - 2);
-      const fx = clampedX - x0;
-      const fy = clampedY - y0;
-      const dstIdx = (ny * newW + nx) * 4;
-
-      for (let c = 0; c < 4; c++) {
-        const v00 = rgba[(y0 * width + x0) * 4 + c];
-        const v10 = rgba[(y0 * width + x0 + 1) * 4 + c];
-        const v01 = rgba[((y0 + 1) * width + x0) * 4 + c];
-        const v11 = rgba[((y0 + 1) * width + x0 + 1) * 4 + c];
-        result[dstIdx + c] = Math.round(
-          v00 * (1 - fx) * (1 - fy) + v10 * fx * (1 - fy) + v01 * (1 - fx) * fy + v11 * fx * fy,
-        );
-      }
-    }
-  }
-
-  return { data: result, width: newW, height: newH };
-}
-
 /** RGBA → グレースケール (BT.601) */
 function toGrayscale(rgba: Uint8ClampedArray, width: number, height: number): Uint8Array {
   const gray = new Uint8Array(width * height);
@@ -584,12 +523,29 @@ function bandQuality(
   return area * (1 + colorRatio);
 }
 
+export interface Point {
+  x: number;
+  y: number;
+}
+
 /**
- * パイが並んでいるバンド領域のみを切り出した画像を返す。
- * リサイズせずにバンド検出し、元画像から高解像度で切り出す。
- * 検出できなかった場合は null を返す（フォールバックとして元画像を使う）。
+ * バンドの4頂点（検出空間での自然な順序）。
+ * lt-rt が水平方向（パイの並び）、lt-lb が垂直方向（パイの高さ方向）。
+ * 元画像が90°回転されて検出された場合でも、これら4点は元画像座標系に逆変換済み。
  */
-export function extractBand(imageData: ImageData, marginScale = 1.9): ImageData | null {
+export interface BandCorners {
+  lt: Point;
+  rt: Point;
+  rb: Point;
+  lb: Point;
+}
+
+/**
+ * 撮影画像からパイの並びを検出して4頂点を返す。
+ * 内部で複数解像度・回転で検出を試み、品質順に検証して最良の候補を返す。
+ * 検出できなかった場合は null。
+ */
+export function detectBand(imageData: ImageData, marginScale = 1.9): BandCorners | null {
   try {
     const origW = imageData.width;
     const origH = imageData.height;
@@ -630,7 +586,6 @@ export function extractBand(imageData: ImageData, marginScale = 1.9): ImageData 
       w: number;
       h: number;
       rotated: boolean;
-      rotW: number;
       rotCcw?: boolean;
     };
     const candidates: Candidate[] = [];
@@ -641,7 +596,7 @@ export function extractBand(imageData: ImageData, marginScale = 1.9): ImageData 
 
       const hBand = findBand(rgba, w, h);
       if (hBand && hBand.count >= 5) {
-        candidates.push({ band: hBand, rgba, w, h, rotated: false, rotW: 0, rotCcw: false });
+        candidates.push({ band: hBand, rgba, w, h, rotated: false, rotCcw: false });
       }
 
       const rotCw = rotateRgba90cw(rgba, w, h);
@@ -653,7 +608,6 @@ export function extractBand(imageData: ImageData, marginScale = 1.9): ImageData 
           w: rotCw.width,
           h: rotCw.height,
           rotated: true,
-          rotW: rotCw.width,
           rotCcw: false,
         });
       }
@@ -667,7 +621,6 @@ export function extractBand(imageData: ImageData, marginScale = 1.9): ImageData 
           w: rotCcw.width,
           h: rotCcw.height,
           rotated: true,
-          rotW: rotCcw.width,
           rotCcw: true,
         });
       }
@@ -679,7 +632,7 @@ export function extractBand(imageData: ImageData, marginScale = 1.9): ImageData 
 
       const hBand = findBand(rgba, w, h);
       if (hBand && hBand.count >= 5) {
-        candidates.push({ band: hBand, rgba, w, h, rotated: false, rotW: 0, rotCcw: false });
+        candidates.push({ band: hBand, rgba, w, h, rotated: false, rotCcw: false });
       }
     }
 
@@ -692,6 +645,10 @@ export function extractBand(imageData: ImageData, marginScale = 1.9): ImageData 
       const band = best.band;
       const useRotated = best.rotated;
 
+      // 検出空間での作業用画像サイズ（90°回転後）
+      const workW = useRotated ? origH : origW;
+      const workH = useRotated ? origW : origH;
+
       // パイ1枚の推定サイズからマージン計算
       const bw = band.colEnd - band.colStart;
       const bh = band.yEnd - band.yStart;
@@ -699,22 +656,7 @@ export function extractBand(imageData: ImageData, marginScale = 1.9): ImageData 
       const estPaiH = estPaiW / PAI_ASPECT_RATIO;
       const extraDown = Math.max(0, estPaiH - bh);
 
-      // 元画像を作業用に準備
-      let workRgba = origRgba;
-      let workW = origW;
-      let workH = origH;
-
-      // 縦長なら90°回転して横向きにする
-      if (useRotated) {
-        const rot = best.rotCcw
-          ? rotateRgba90ccw(workRgba, workW, workH)
-          : rotateRgba90cw(workRgba, workW, workH);
-        workRgba = rot.data;
-        workW = rot.width;
-        workH = rot.height;
-      }
-
-      // 切り出し範囲を計算（回転前の座標系）
+      // 切り出し範囲（検出解像度 → 作業空間）
       const fbScaleX = workW / best.w;
       const fbScaleY = workH / best.h;
       const detectedCenter = (band.colStart + band.colEnd) / 2;
@@ -733,90 +675,132 @@ export function extractBand(imageData: ImageData, marginScale = 1.9): ImageData 
       );
       const fbW = fbR - fbL,
         fbH = fbB - fbT;
-      if (fbW < 50 || fbH < 50) return null;
+      if (fbW < 50 || fbH < 50) continue;
 
-      // 角度補正: 切り出し前に元画像全体を回転して黒枠を防ぐ
+      // 傾き角度
       const tiltAngle = estimateTiltFromEdges(best.rgba, best.w, {
         yStart: Math.max(0, band.yStart - Math.round(estPaiH)),
         yEnd: Math.min(best.h, band.yEnd + Math.round(estPaiH)),
         colStart: band.colStart,
         colEnd: band.colEnd,
       });
-      if (Math.abs(tiltAngle) > 0.052 && Math.abs(tiltAngle) < Math.PI / 4) {
-        const rotated = rotateRgbaByAngle(workRgba, workW, workH, -tiltAngle);
-        workRgba = rotated.data;
-        workW = rotated.width;
-        workH = rotated.height;
-      }
 
-      // 回転後の座標で切り出し範囲を再計算（回転で画像が拡大するのでオフセット補正）
-      const offX = (workW - (useRotated ? origH : origW)) / 2;
-      const offY = (workH - (useRotated ? origW : origH)) / 2;
-      const adjFbL = Math.max(0, Math.round(fbL + offX));
-      const adjFbT = Math.max(0, Math.round(fbT + offY));
-      const adjFbR = Math.min(workW, Math.round(fbR + offX));
-      const adjFbB = Math.min(workH, Math.round(fbB + offY));
-      const adjFbW = adjFbR - adjFbL,
-        adjFbH = adjFbB - adjFbT;
-      if (adjFbW < 50 || adjFbH < 50) return null;
+      // 検出空間（作業空間）の4頂点を計算（傾きを反映）
+      const cx = (fbL + fbR) / 2;
+      const cy = (fbT + fbB) / 2;
+      const halfW = (fbR - fbL) / 2;
+      const halfH = (fbB - fbT) / 2;
+      const cosT = Math.cos(tiltAngle);
+      const sinT = Math.sin(tiltAngle);
+      const rotateAroundCenter = (lx: number, ly: number): Point => ({
+        x: cx + lx * cosT - ly * sinT,
+        y: cy + lx * sinT + ly * cosT,
+      });
+      const workCorners: BandCorners = {
+        lt: rotateAroundCenter(-halfW, -halfH),
+        rt: rotateAroundCenter(halfW, -halfH),
+        rb: rotateAroundCenter(halfW, halfH),
+        lb: rotateAroundCenter(-halfW, halfH),
+      };
 
-      const bandData = new Uint8ClampedArray(adjFbW * adjFbH * 4);
-      for (let y = 0; y < adjFbH; y++) {
-        for (let x = 0; x < adjFbW; x++) {
-          const srcIdx = ((adjFbT + y) * workW + (adjFbL + x)) * 4;
-          const dstIdx = (y * adjFbW + x) * 4;
-          bandData[dstIdx] = workRgba[srcIdx];
-          bandData[dstIdx + 1] = workRgba[srcIdx + 1];
-          bandData[dstIdx + 2] = workRgba[srcIdx + 2];
-          bandData[dstIdx + 3] = workRgba[srcIdx + 3];
+      // 作業空間（90°回転済み）→ 元画像座標系へ逆変換
+      const inverseRotate = (p: Point): Point => {
+        if (!useRotated) return p;
+        if (best.rotCcw) {
+          // CCW回転の逆変換: 回転後(rx, ry) → 元(origW-1-ry, rx)
+          return { x: origW - 1 - p.y, y: p.x };
         }
-      }
+        // CW回転の逆変換: 回転後(rx, ry) → 元(ry, origH-1-rx)
+        return { x: p.y, y: origH - 1 - p.x };
+      };
 
-      const validated = validateBandImage(bandData, adjFbW, adjFbH);
-      if (validated) return validated;
-      // この候補は検証失敗 → 次の候補を試す
-    } // for (const best of candidates)
+      const corners: BandCorners = {
+        lt: inverseRotate(workCorners.lt),
+        rt: inverseRotate(workCorners.rt),
+        rb: inverseRotate(workCorners.rb),
+        lb: inverseRotate(workCorners.lb),
+      };
+
+      // 検証: 4頂点で囲まれた矩形領域の画素を軽くサンプリング
+      if (validateCornersOnImage(origRgba, origW, origH, corners)) {
+        return corners;
+      }
+    }
 
     return null;
-  } catch {
+  } catch (e) {
+    console.error('[pai-detector] detectBandで予期しない例外', e);
     return null;
   }
 }
 
 /**
- * 切り出し画像がパイの列を含んでいるか最終検証する。
- * 色多様性と白ピクセル比率で、テーブル面などの誤切り出しを棄却。
+ * 4頂点で囲まれた領域に「パイらしさ」があるかを軽くサンプリングして検証する。
+ * 全ピクセル走査せずに格子状にサンプリングし、色多様性と非空チェックを行う。
+ *
+ * 閾値の根拠（撮影サンプルから経験的に決定）:
+ * - 8x8=64点サンプル: 全走査の1/1000以下のコストで主要色は十分捕捉できる
+ * - 彩度 (max-min)/max >= 0.15: JPEG圧縮ノイズを除外して有彩色とみなす下限
+ * - 白ピクセル比 > 70%: パイ側面やテーブル等の真っ白な誤検出を弾く
+ * - 有彩色ピクセル >= 20%: テーブル面・床などの無彩色背景を弾く
+ * - 色相 >= 3種類 (bin が chromaPixels の 5% 以上): パイはキャラ色が多様、単色背景を弾く
  */
-function validateBandImage(
-  data: Uint8ClampedArray,
+function validateCornersOnImage(
+  rgba: Uint8ClampedArray,
   width: number,
   height: number,
-): ImageData | null {
-  const total = width * height;
-  let whiteCount = 0;
-  let colorfulCount = 0;
-  const step = 5;
-  let sampled = 0;
+  corners: BandCorners,
+): boolean {
+  // 4頂点をローカル座標に変換するためのベクトル
+  const ux = corners.rt.x - corners.lt.x;
+  const uy = corners.rt.y - corners.lt.y;
+  const vx = corners.lb.x - corners.lt.x;
+  const vy = corners.lb.y - corners.lt.y;
 
-  for (let i = 0; i < total; i += step) {
-    const idx = i * 4;
-    const r = data[idx],
-      g = data[idx + 1],
-      b = data[idx + 2];
-    if (r > WHITE_THRESHOLD && g > WHITE_THRESHOLD && b > WHITE_THRESHOLD) whiteCount++;
-    const max = Math.max(r, g, b),
-      min = Math.min(r, g, b);
-    if (max > 0 && (max - min) / max > 0.35) colorfulCount++;
-    sampled++;
+  const SAMPLES = 8; // 8x8 = 64点
+  const hueBins = new Int32Array(12);
+  let chromaPixels = 0;
+  let whiteCount = 0;
+  let totalSampled = 0;
+
+  for (let i = 0; i < SAMPLES; i++) {
+    for (let j = 0; j < SAMPLES; j++) {
+      const u = (i + 0.5) / SAMPLES;
+      const v = (j + 0.5) / SAMPLES;
+      const px = Math.round(corners.lt.x + ux * u + vx * v);
+      const py = Math.round(corners.lt.y + uy * u + vy * v);
+      if (px < 0 || px >= width || py < 0 || py >= height) continue;
+      const idx = (py * width + px) * 4;
+      const r = rgba[idx],
+        g = rgba[idx + 1],
+        b = rgba[idx + 2];
+      totalSampled++;
+
+      if (r > WHITE_THRESHOLD && g > WHITE_THRESHOLD && b > WHITE_THRESHOLD) {
+        whiteCount++;
+        continue;
+      }
+
+      const max = Math.max(r, g, b),
+        min = Math.min(r, g, b);
+      if (max === 0 || (max - min) / max < 0.15) continue;
+      chromaPixels++;
+      const delta = max - min;
+      let h = 0;
+      if (max === r) h = 60 * (((g - b) / delta) % 6);
+      else if (max === g) h = 60 * ((b - r) / delta + 2);
+      else h = 60 * ((r - g) / delta + 4);
+      if (h < 0) h += 360;
+      hueBins[Math.min(11, Math.floor(h / 30))]++;
+    }
   }
 
-  const whiteRatio = whiteCount / sampled;
-  const colorRatio = colorfulCount / sampled;
+  if (totalSampled === 0) return false;
+  const whiteRatio = whiteCount / totalSampled;
+  if (whiteRatio > 0.7) return false; // 真っ白＝側面誤検出
+  if (chromaPixels < totalSampled * 0.2) return false; // 色がない＝テーブル等
 
-  // パイの列: 白枠(>5%) + 高彩度の絵柄(>15%)
-  // テーブル面は彩度0.35以上のピクセルが少ない
-  // パイの列: 白枠(>3%) + 高彩度の絵柄(>10%)
-  if (whiteRatio < 0.03 || colorRatio < 0.1) return null;
-
-  return { data, width, height, colorSpace: 'srgb' } as ImageData;
+  // 色の種類が3種以上あるか
+  const significantBins = Array.from(hueBins).filter((c) => c > chromaPixels * 0.05).length;
+  return significantBins >= 3;
 }

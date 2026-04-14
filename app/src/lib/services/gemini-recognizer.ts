@@ -6,22 +6,23 @@
  */
 
 import type { PaiId, RecognitionResult } from '../types.js';
-import type { ExtractBandResult } from './extract-band.worker.js';
+import type { BandCorners } from './pai-detector.js';
+import type { DetectBandRequest, DetectBandResponse } from './extract-band.worker.js';
 import ExtractBandWorker from './extract-band.worker.js?worker';
 
 export class GeminiRecognitionError extends Error {
   override readonly name = 'GeminiRecognitionError';
 }
 
-/** Web WorkerでextractBandを実行 */
-function runExtractBand(
+/** Web Workerでバンド検出を実行 */
+function runDetectBand(
   data: Uint8ClampedArray,
   width: number,
   height: number,
-): Promise<ExtractBandResult | null> {
+): Promise<BandCorners | null> {
   return new Promise((resolve) => {
     const worker = new ExtractBandWorker();
-    worker.onmessage = (e: MessageEvent<ExtractBandResult | null>) => {
+    worker.onmessage = (e: MessageEvent<DetectBandResponse>) => {
       worker.terminate();
       resolve(e.data);
     };
@@ -29,8 +30,27 @@ function runExtractBand(
       worker.terminate();
       resolve(null);
     };
-    worker.postMessage({ data, width, height }, { transfer: [data.buffer] });
+    const req: DetectBandRequest = { data, width, height };
+    worker.postMessage(req, { transfer: [data.buffer] });
   });
+}
+
+/** lt-rt 方向を水平とみなして4頂点領域を切り出す */
+function cropBand(bitmap: ImageBitmap, corners: BandCorners): ImageBitmap {
+  const ux = corners.rt.x - corners.lt.x;
+  const uy = corners.rt.y - corners.lt.y;
+  const bandW = Math.max(1, Math.round(Math.sqrt(ux * ux + uy * uy)));
+  const vx = corners.lb.x - corners.lt.x;
+  const vy = corners.lb.y - corners.lt.y;
+  const bandH = Math.max(1, Math.round(Math.sqrt(vx * vx + vy * vy)));
+  const angle = Math.atan2(uy, ux);
+
+  const canvas = new OffscreenCanvas(bandW, bandH);
+  const ctx = canvas.getContext('2d')!;
+  ctx.rotate(-angle);
+  ctx.translate(-corners.lt.x, -corners.lt.y);
+  ctx.drawImage(bitmap, 0, 0);
+  return canvas.transferToImageBitmap();
 }
 
 /**
@@ -46,40 +66,43 @@ async function preparePhoto(imageUrl: string): Promise<Blob> {
     console.debug(`[recognize] 画像読み込み: ${(performance.now() - t).toFixed(0)}ms`);
   }
 
-  // バンド切り出しを試みる
+  // バンド検出: 全画素を一度だけ取得して Worker に transfer
   t = performance.now();
   const fullCanvas = new OffscreenCanvas(bitmap.width, bitmap.height);
   const fullCtx = fullCanvas.getContext('2d')!;
   fullCtx.drawImage(bitmap, 0, 0);
   const fullImageData = fullCtx.getImageData(0, 0, bitmap.width, bitmap.height);
 
-  const bandImageData = await runExtractBand(
+  const corners = await runDetectBand(
     new Uint8ClampedArray(fullImageData.data),
     fullImageData.width,
     fullImageData.height,
   );
   if (import.meta.env.DEV) {
-    console.debug(`[recognize] バンド切り出し: ${(performance.now() - t).toFixed(0)}ms`);
+    console.debug(`[recognize] バンド検出: ${(performance.now() - t).toFixed(0)}ms`);
   }
 
   // バンド品質判定:
   // - 幅に対して高さが十分（>15%）
   // - 元画像の面積の10%以上を占める（極端に小さい切り出しを除外）
-  const isBandUsable =
-    bandImageData !== null &&
-    bandImageData.height / bandImageData.width > 0.15 &&
-    (bandImageData.width * bandImageData.height) / (bitmap.width * bitmap.height) > 0.1;
+  let isBandUsable = false;
+  let bandW = 0;
+  let bandH = 0;
+  if (corners !== null) {
+    const ux = corners.rt.x - corners.lt.x;
+    const uy = corners.rt.y - corners.lt.y;
+    bandW = Math.sqrt(ux * ux + uy * uy);
+    const vx = corners.lb.x - corners.lt.x;
+    const vy = corners.lb.y - corners.lt.y;
+    bandH = Math.sqrt(vx * vx + vy * vy);
+    isBandUsable = bandH / bandW > 0.15 && (bandW * bandH) / (bitmap.width * bitmap.height) > 0.1;
+  }
 
   t = performance.now();
   let srcBitmap: ImageBitmap;
-  if (isBandUsable && bandImageData) {
-    // バンド切り出し成功 → RGBA データから ImageBitmap に変換
-    const bandCanvas = new OffscreenCanvas(bandImageData.width, bandImageData.height);
-    const bandCtx = bandCanvas.getContext('2d')!;
-    const nativeImageData = bandCtx.createImageData(bandImageData.width, bandImageData.height);
-    nativeImageData.data.set(bandImageData.data);
-    bandCtx.putImageData(nativeImageData, 0, 0);
-    srcBitmap = await createImageBitmap(bandCanvas);
+  if (isBandUsable && corners) {
+    // バンド切り出し成功 → 4頂点から ImageBitmap を生成
+    srcBitmap = cropBand(bitmap, corners);
     bitmap.close();
   } else {
     // フォールバック: 全体画像
