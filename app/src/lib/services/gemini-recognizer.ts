@@ -54,6 +54,39 @@ function cropBand(bitmap: ImageBitmap, corners: BandCorners): ImageBitmap {
 }
 
 /**
+ * 元画像にバンドの4頂点を線で描いた OffscreenCanvas を返す（同期的に bitmap をコピー）。
+ * corners が null の場合は元画像のみを描画（検出失敗時のデバッグに使う）。
+ */
+function drawBandOverlayCanvas(bitmap: ImageBitmap, corners: BandCorners | null): OffscreenCanvas {
+  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(bitmap, 0, 0);
+  if (corners) {
+    ctx.strokeStyle = 'lime';
+    ctx.lineWidth = Math.max(3, Math.round(bitmap.width / 300));
+    ctx.beginPath();
+    ctx.moveTo(corners.lt.x, corners.lt.y);
+    ctx.lineTo(corners.rt.x, corners.rt.y);
+    ctx.lineTo(corners.rb.x, corners.rb.y);
+    ctx.lineTo(corners.lb.x, corners.lb.y);
+    ctx.closePath();
+    ctx.stroke();
+  }
+  return canvas;
+}
+
+/** canvas を JPEG にエンコードして dev server のデバッグエンドポイントに送信する */
+async function sendDebugImage(canvas: OffscreenCanvas): Promise<void> {
+  const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 });
+  const buf = await blob.arrayBuffer();
+  await fetch('/__debug-image', {
+    method: 'POST',
+    headers: { 'Content-Type': 'image/jpeg' },
+    body: buf,
+  });
+}
+
+/**
  * 撮影画像からパイのバンド領域を切り出してJPEG Blobにする。
  * バンド検出に失敗した場合は全体画像をフォールバック。
  */
@@ -80,6 +113,15 @@ async function preparePhoto(imageUrl: string): Promise<Blob> {
   );
   if (import.meta.env.DEV) {
     console.debug(`[recognize] バンド検出: ${(performance.now() - t).toFixed(0)}ms`);
+  }
+
+  // DEV時のみ: オーバーレイ画像を dev server に送信（fire-and-forget）
+  // corners が null でも元画像だけを送ることで、検出失敗ケースの調査に使える
+  if (import.meta.env.DEV) {
+    const overlayCanvas = drawBandOverlayCanvas(bitmap, corners);
+    sendDebugImage(overlayCanvas).catch((e) => {
+      console.debug('[recognize] デバッグ画像送信失敗', e);
+    });
   }
 
   // バンド品質判定:
