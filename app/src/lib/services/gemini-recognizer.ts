@@ -21,24 +21,54 @@ async function loadImage(imageUrl: string): Promise<ImageBitmap> {
   return createImageBitmap(blob);
 }
 
+/** バンド検出に渡す最大解像度。これ以上はネイティブ drawImage でダウンサンプリングする。 */
+const DETECT_BAND_MAX_DIM = 1920;
+
 /**
  * Web Workerでバンド検出を実行する。
+ *
+ * 4K クラスの画像をそのまま worker に渡すと、getImageData と worker 内の
+ * JS bilinear 縮小が高コストになる。そこでネイティブ drawImage で
+ * DETECT_BAND_MAX_DIM まで先に縮小し、縮小後の imageData だけを
+ * transfer する。worker の 1920 フォールバックパスにも十分な解像度を保つ。
  *
  * NOTE: ピクセルデータは getImageData で一度だけ取得し、postMessage の transfer で
  * Worker に渡す。transfer 後は main thread 側の imageData は detached になるため、
  * この関数内・呼び出し後のいずれでも参照してはいけない。
  */
 function runDetectBand(bitmap: ImageBitmap): Promise<BandCorners | null> {
-  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+  const maxDim = Math.max(bitmap.width, bitmap.height);
+  const scale = maxDim > DETECT_BAND_MAX_DIM ? DETECT_BAND_MAX_DIM / maxDim : 1;
+  const targetW = Math.max(1, Math.round(bitmap.width * scale));
+  const targetH = Math.max(1, Math.round(bitmap.height * scale));
+
+  const canvas = new OffscreenCanvas(targetW, targetH);
   const ctx = canvas.getContext('2d')!;
-  ctx.drawImage(bitmap, 0, 0);
-  const imageData = ctx.getImageData(0, 0, bitmap.width, bitmap.height);
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(bitmap, 0, 0, targetW, targetH);
+  const imageData = ctx.getImageData(0, 0, targetW, targetH);
 
   return new Promise((resolve) => {
     const worker = new ExtractBandWorker();
     worker.onmessage = (e: MessageEvent<DetectBandResponse>) => {
       worker.terminate();
-      resolve(e.data);
+      const corners = e.data;
+      if (corners === null) {
+        resolve(null);
+        return;
+      }
+      // worker は縮小後の座標系で corners を返すので bitmap 座標に戻す
+      if (scale === 1) {
+        resolve(corners);
+      } else {
+        const inv = 1 / scale;
+        resolve({
+          lt: { x: corners.lt.x * inv, y: corners.lt.y * inv },
+          rt: { x: corners.rt.x * inv, y: corners.rt.y * inv },
+          rb: { x: corners.rb.x * inv, y: corners.rb.y * inv },
+          lb: { x: corners.lb.x * inv, y: corners.lb.y * inv },
+        });
+      }
     };
     worker.onerror = () => {
       worker.terminate();
@@ -76,37 +106,6 @@ function isCornersUsable(bitmap: ImageBitmap, corners: BandCorners): boolean {
 }
 
 /**
- * 4頂点で囲まれた領域を切り出して ImageBitmap を返す。
- * 傾きは回転補正するが、台形歪みは無視（lt-rt 方向を水平とみなす）。
- */
-function cropBand(bitmap: ImageBitmap, corners: BandCorners): ImageBitmap {
-  const { bandW: rawW, bandH: rawH, angle } = bandGeometry(corners);
-  const bandW = Math.max(1, Math.round(rawW));
-  const bandH = Math.max(1, Math.round(rawH));
-
-  const canvas = new OffscreenCanvas(bandW, bandH);
-  const ctx = canvas.getContext('2d')!;
-  // src(lt) → dst(0,0), src(rt) → dst(bandW, 0) となるように変換
-  ctx.rotate(-angle);
-  ctx.translate(-corners.lt.x, -corners.lt.y);
-  ctx.drawImage(bitmap, 0, 0);
-  return canvas.transferToImageBitmap();
-}
-
-/** ImageBitmap を長辺 maxDim にリサイズして JPEG Blob を返す */
-async function encodeForGemini(bitmap: ImageBitmap, maxDim = 1024): Promise<Blob> {
-  const srcW = bitmap.width;
-  const srcH = bitmap.height;
-  const scale = Math.max(srcW, srcH) > maxDim ? maxDim / Math.max(srcW, srcH) : 1;
-  const w = Math.round(srcW * scale);
-  const h = Math.round(srcH * scale);
-
-  const canvas = new OffscreenCanvas(w, h);
-  canvas.getContext('2d')!.drawImage(bitmap, 0, 0, w, h);
-  return canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 });
-}
-
-/**
  * 元画像にバンドの4頂点を線で描いた OffscreenCanvas を返す（同期的に bitmap をコピー）。
  * corners が null の場合は元画像のみを描画（検出失敗時のデバッグに使う）。
  */
@@ -140,6 +139,49 @@ async function sendDebugImage(canvas: OffscreenCanvas): Promise<void> {
 }
 
 /**
+ * 4頂点で囲まれた領域を切り出しつつ長辺 maxDim にリサイズして JPEG Blob を返す。
+ * 切り出し・回転補正・リサイズを一つの変換行列に合成し drawImage 1 回で済ませる。
+ * 中間 ImageBitmap の確保と二重リサンプリングが消えるので cost/品質とも改善する。
+ * corners が null の場合は元画像全体を対象にする。
+ */
+async function cropAndEncode(
+  bitmap: ImageBitmap,
+  corners: BandCorners | null,
+  maxDim = 1024,
+): Promise<Blob> {
+  if (!corners) {
+    // crop 不要: 全体を長辺 maxDim にリサイズして JPEG
+    const srcW = bitmap.width;
+    const srcH = bitmap.height;
+    const s = Math.max(srcW, srcH) > maxDim ? maxDim / Math.max(srcW, srcH) : 1;
+    const w = Math.max(1, Math.round(srcW * s));
+    const h = Math.max(1, Math.round(srcH * s));
+    const canvas = new OffscreenCanvas(w, h);
+    const ctx = canvas.getContext('2d')!;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    return canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 });
+  }
+
+  const { bandW: rawW, bandH: rawH, angle } = bandGeometry(corners);
+  const scale = Math.max(rawW, rawH) > maxDim ? maxDim / Math.max(rawW, rawH) : 1;
+  const targetW = Math.max(1, Math.round(rawW * scale));
+  const targetH = Math.max(1, Math.round(rawH * scale));
+
+  const canvas = new OffscreenCanvas(targetW, targetH);
+  const ctx = canvas.getContext('2d')!;
+  ctx.imageSmoothingQuality = 'high';
+  // 変換を合成: src(lt) → dst(0,0), src(rt) → dst(targetW, 0)
+  // target = scale × R(-angle) × (src - lt)
+  // canvas は post-multiply なので scale → rotate → translate の順で適用する
+  ctx.scale(scale, scale);
+  ctx.rotate(-angle);
+  ctx.translate(-corners.lt.x, -corners.lt.y);
+  ctx.drawImage(bitmap, 0, 0);
+  return canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 });
+}
+
+/**
  * 撮影画像からパイのバンド領域を切り出してJPEG Blobにする。
  * バンド検出に失敗した場合は全体画像をフォールバック。
  */
@@ -150,22 +192,11 @@ async function preparePhoto(imageUrl: string): Promise<Blob> {
     console.debug(`[recognize] 画像読み込み: ${(performance.now() - t).toFixed(0)}ms`);
   }
 
-  let bandBitmap: ImageBitmap | null = null;
-
   try {
     t = performance.now();
     const corners = await runDetectBand(bitmap);
     if (import.meta.env.DEV) {
       console.debug(`[recognize] バンド検出: ${(performance.now() - t).toFixed(0)}ms`);
-    }
-
-    t = performance.now();
-    const usable = corners !== null && isCornersUsable(bitmap, corners);
-    if (corners && usable) {
-      bandBitmap = cropBand(bitmap, corners);
-    }
-    if (import.meta.env.DEV) {
-      console.debug(`[recognize] バンド切り出し: ${(performance.now() - t).toFixed(0)}ms`);
     }
 
     // DEV時のみ: オーバーレイ画像を dev server に送信（fire-and-forget）
@@ -178,14 +209,16 @@ async function preparePhoto(imageUrl: string): Promise<Blob> {
     }
 
     t = performance.now();
-    const jpegBlob = await encodeForGemini(bandBitmap ?? bitmap);
+    const usable = corners !== null && isCornersUsable(bitmap, corners);
+    const jpegBlob = await cropAndEncode(bitmap, usable ? corners : null);
     if (import.meta.env.DEV) {
-      console.debug(`[recognize] リサイズ+JPEG変換: ${(performance.now() - t).toFixed(0)}ms`);
+      console.debug(
+        `[recognize] 切り出し+リサイズ+JPEG変換: ${(performance.now() - t).toFixed(0)}ms`,
+      );
     }
 
     return jpegBlob;
   } finally {
-    bandBitmap?.close();
     bitmap.close();
   }
 }
