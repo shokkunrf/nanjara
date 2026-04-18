@@ -83,18 +83,23 @@
 
 <style>
   :global(body) {
-    overflow: auto !important;
+    overflow: hidden;
   }
 
   .page {
     padding: 16px;
     max-width: 480px;
     margin: 0 auto;
+    height: 100svh;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
   }
 
   header {
     text-align: center;
     margin-bottom: 16px;
+    flex-shrink: 0;
   }
 
   h1 {
@@ -109,6 +114,9 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
   }
 
   .rule-item {
@@ -172,7 +180,7 @@
     justify-content: center;
     gap: 12px;
     margin-top: 24px;
-    padding-bottom: 24px;
+    flex-shrink: 0;
   }
 
   .btn {
