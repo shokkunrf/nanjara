@@ -46,7 +46,7 @@
 
 <div class="page">
   <header>
-    <h1>ルール一覧</h1>
+    <h1>役一覧</h1>
   </header>
 
   {#if errorMessage}

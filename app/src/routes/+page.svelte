@@ -9,7 +9,7 @@
   <div class="actions">
     <a href={resolve('/camera')} class="btn btn-primary">撮影する</a>
     <a href={resolve('/hand')} class="btn btn-secondary">手牌入力</a>
-    <a href={resolve('/rules')} class="btn btn-secondary">ルール一覧</a>
+    <a href={resolve('/rules')} class="btn btn-secondary">役一覧</a>
   </div>
 </div>
 
