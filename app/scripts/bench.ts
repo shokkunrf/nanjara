@@ -225,6 +225,11 @@ async function run() {
 
       if (errorOrResult === 'error') {
         console.log(`${tc.image}: エラー（スキップ）`);
+        // dev server の stderr は多少遅れて届くので少し待ってから表示する
+        // (成功時の下の処理と同じ 500ms)
+        await new Promise((r) => setTimeout(r, 500));
+        console.log('サーバー:');
+        for (const log of serverLogs) console.log(`  ${log}`);
         await context.close();
         continue;
       }
