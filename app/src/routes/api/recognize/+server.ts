@@ -14,7 +14,7 @@ export const POST: RequestHandler = async ({ request }) => {
     const paiIds = await recognizePais(buffer);
     return json({ paiIds });
   } catch (e) {
-    const message = e instanceof Error ? e.message : 'Unknown error';
-    error(502, message);
+    console.error('[recognize:server] 認識処理でエラー:', e);
+    error(502, '認識処理に失敗しました');
   }
 };
