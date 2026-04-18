@@ -46,9 +46,7 @@
 
 <div class="page">
   <header>
-    <button class="back" onclick={() => goto(resolve('/'))}>← 戻る</button>
     <h1>ルール一覧</h1>
-    <button class="nav-link" onclick={() => goto(resolve('/hand'))}>手牌 →</button>
   </header>
 
   {#if errorMessage}
@@ -74,6 +72,12 @@
         </li>
       {/each}
     </ul>
+
+    <div class="actions">
+      <button class="btn" onclick={() => goto(resolve('/'))}>ホーム</button>
+      <button class="btn" onclick={() => goto(resolve('/camera'))}>撮影</button>
+      <button class="btn" onclick={() => goto(resolve('/hand'))}>手牌</button>
+    </div>
   {/if}
 </div>
 
@@ -89,25 +93,8 @@
   }
 
   header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+    text-align: center;
     margin-bottom: 16px;
-  }
-
-  .back,
-  .nav-link {
-    background: none;
-    border: none;
-    color: #e91e63;
-    font-size: 14px;
-    cursor: pointer;
-    padding: 4px 0;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .nav-link {
-    margin-left: auto;
   }
 
   h1 {
@@ -178,5 +165,28 @@
     color: #e91e63;
     font-weight: 600;
     white-space: nowrap;
+  }
+
+  .actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 24px;
+    padding-bottom: 24px;
+  }
+
+  .btn {
+    padding: 12px 32px;
+    border-radius: 28px;
+    border: 2px solid #fff;
+    background: transparent;
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .btn:active {
+    background: rgba(255, 255, 255, 0.2);
   }
 </style>

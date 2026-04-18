@@ -134,6 +134,7 @@
     {/if}
 
     <div class="actions">
+      <button class="btn" onclick={() => goto(resolve('/'))}>ホーム</button>
       <button class="btn" onclick={() => goto(resolve('/camera'))}>撮影</button>
       <button class="btn" onclick={() => goto(resolve('/rules'))}>ルール</button>
     </div>

@@ -135,7 +135,7 @@
 
   {#snippet controls()}
     <div class="controls-inner">
-      <button class="close" onclick={onclose}>閉じる</button>
+      <button class="close" onclick={onclose}>ホーム</button>
       {#if !errorMessage}
         <button class="shutter" onclick={capture} disabled={!stream || capturing} aria-label="撮影">
           <span class="shutter-inner"></span>
