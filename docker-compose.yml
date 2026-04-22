@@ -1,0 +1,13 @@
+services:
+  app:
+    build: ./app
+    init: true
+    env_file: ./app/.env
+    environment:
+      NODE_ENV: development
+      PAI_CATALOG_DIR: /var/app/pai-catalogs
+    volumes:
+      - ./app/src/lib/server/assets:/var/app/pai-catalogs:ro
+      - ./app/static/pai-images:/app/build/client/pai-images:ro
+    ports:
+      - "3000:3000"

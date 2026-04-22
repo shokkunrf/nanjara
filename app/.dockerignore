@@ -1,0 +1,12 @@
+node_modules
+.svelte-kit
+build
+.vercel
+test-results
+e2e
+static/e2e
+static/pai-images
+src/lib/server/assets/*
+!src/lib/server/assets/.gitkeep
+.env
+.env.*
