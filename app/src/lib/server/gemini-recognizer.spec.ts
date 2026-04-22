@@ -3,9 +3,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
-vi.mock('$env/static/private', () => ({
-  GEMINI_API_KEY: 'test-key',
-  GEMINI_MODEL: 'test-model',
+vi.mock('$env/dynamic/private', () => ({
+  env: {
+    GEMINI_API_KEY: 'test-key',
+    GEMINI_MODEL: 'test-model',
+  },
 }));
 
 vi.mock('node:fs/promises', async () => {

@@ -1,11 +1,9 @@
-import { GEMINI_API_KEY, GEMINI_MODEL } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 import sharp from 'sharp';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import paiDetailsJson from '../../../static/pai-details.json';
-
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 const CATALOG_DIR = process.env.PAI_CATALOG_DIR ?? path.resolve(import.meta.dirname, 'assets');
 const CATALOG_FILES = [
@@ -160,13 +158,17 @@ export async function recognizePais(photoBuffer: Buffer): Promise<string[]> {
   ];
 
   // APIキー未設定時: DEV では bench 計測用に空配列、本番では設定エラー
-  if (!GEMINI_API_KEY) {
+  if (!env.GEMINI_API_KEY) {
     if (!import.meta.env.DEV) {
       throw new Error('GEMINI_API_KEY is not configured');
     }
     console.debug('[recognize:server] GEMINI_API_KEY未設定のためGemini API呼び出しをスキップ');
     return [];
   }
+  if (!env.GEMINI_MODEL) {
+    throw new Error('GEMINI_MODEL is not configured');
+  }
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:generateContent`;
 
   const details: Record<string, { name: string }> = paiDetailsJson;
   const ids = Object.keys(details).sort();
@@ -190,9 +192,9 @@ export async function recognizePais(photoBuffer: Buffer): Promise<string[]> {
   };
 
   t = performance.now();
-  const response = await fetch(API_URL, {
+  const response = await fetch(apiUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
     body: JSON.stringify(body),
   });
 
