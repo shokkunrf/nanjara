@@ -3,19 +3,26 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
-vi.mock('$app/server', () => ({
-  read: () => new Response(new ArrayBuffer(8)),
-}));
-
 vi.mock('$env/static/private', () => ({
   GEMINI_API_KEY: 'test-key',
   GEMINI_MODEL: 'test-model',
 }));
 
-vi.mock('$lib/server/assets/pai-catalog-1.png', () => ({ default: 'cat1' }));
-vi.mock('$lib/server/assets/pai-catalog-2.png', () => ({ default: 'cat2' }));
-vi.mock('$lib/server/assets/pai-catalog-3.png', () => ({ default: 'cat3' }));
-vi.mock('$lib/server/assets/pai-catalog-4.png', () => ({ default: 'cat4' }));
+vi.mock('node:fs/promises', async () => {
+  const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
+  return {
+    ...actual,
+    default: {
+      ...actual,
+      readFile: vi.fn().mockResolvedValue(Buffer.alloc(8)),
+      mkdir: vi.fn().mockResolvedValue(undefined),
+      writeFile: vi.fn().mockResolvedValue(undefined),
+    },
+    readFile: vi.fn().mockResolvedValue(Buffer.alloc(8)),
+    mkdir: vi.fn().mockResolvedValue(undefined),
+    writeFile: vi.fn().mockResolvedValue(undefined),
+  };
+});
 
 // sharpモック: ensureAlpha().raw().toBuffer() で RGBAピクセルデータを返す
 const mockSharpInstance = {

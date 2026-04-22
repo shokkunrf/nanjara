@@ -1,16 +1,19 @@
-import { read } from '$app/server';
 import { GEMINI_API_KEY, GEMINI_MODEL } from '$env/static/private';
 import sharp from 'sharp';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import catalog1 from '$lib/server/assets/pai-catalog-1.png';
-import catalog2 from '$lib/server/assets/pai-catalog-2.png';
-import catalog3 from '$lib/server/assets/pai-catalog-3.png';
-import catalog4 from '$lib/server/assets/pai-catalog-4.png';
 import paiDetailsJson from '../../../static/pai-details.json';
 
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+
+const CATALOG_DIR = process.env.PAI_CATALOG_DIR ?? path.resolve(import.meta.dirname, 'assets');
+const CATALOG_FILES = [
+  'pai-catalog-1.png',
+  'pai-catalog-2.png',
+  'pai-catalog-3.png',
+  'pai-catalog-4.png',
+];
 
 /** カタログ画像のBase64キャッシュ */
 let catalogCache: string[] | null = null;
@@ -18,12 +21,12 @@ let catalogCache: string[] | null = null;
 async function loadCatalogs(): Promise<string[]> {
   if (catalogCache) return catalogCache;
 
-  const catalogs: string[] = [];
-  for (const src of [catalog1, catalog2, catalog3, catalog4]) {
-    const res = read(src);
-    const buf = await res.arrayBuffer();
-    catalogs.push(Buffer.from(buf).toString('base64'));
-  }
+  const catalogs = await Promise.all(
+    CATALOG_FILES.map(async (name) => {
+      const buf = await fs.readFile(path.join(CATALOG_DIR, name));
+      return buf.toString('base64');
+    }),
+  );
 
   catalogCache = catalogs;
   return catalogs;
