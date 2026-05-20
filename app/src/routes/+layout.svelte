@@ -42,6 +42,7 @@
 </script>
 
 <svelte:head>
+  <title>nanjara</title>
   <link rel="icon" href={favicon} />
 </svelte:head>
 
