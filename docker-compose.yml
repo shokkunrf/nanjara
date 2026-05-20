@@ -7,7 +7,7 @@ services:
       NODE_ENV: development
       PAI_CATALOG_DIR: /var/app/pai-catalogs
     volumes:
-      - ./app/src/lib/server/assets:/var/app/pai-catalogs:ro
-      - ./app/static/pai-images:/app/build/client/pai-images:ro
+      - ./data/pai-catalogs:/var/app/pai-catalogs:ro
+      - ./data/pai-images:/app/build/client/pai-images:ro
     ports:
       - "3000:3000"
