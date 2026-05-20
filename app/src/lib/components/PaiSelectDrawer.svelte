@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import type { PaiId, PaiDetailMap } from '$lib/types';
 
   const FRANCHISE_LABELS: Record<string, string> = {
@@ -48,8 +47,12 @@
     return currentPaiIds.includes(paiId);
   }
 
-  onMount(() => {
-    document.body.style.overflow = 'hidden';
+  $effect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
     return () => {
       document.body.style.overflow = '';
     };
